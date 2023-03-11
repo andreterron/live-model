@@ -1,34 +1,45 @@
 # Live Model
 
-Live Model is a live ORM
+Live Model provides a local cache to your API or remote database, so that your app responds immediately, whether your user has gigabit internet, an unstable connection, or is offline!
 
 ## Installation
 
-yarn
+```bash
+npm install live-model@alpha
+```
 
-`yarn add live-model`
+## Usage
 
-npm
+> ⚠️&nbsp;&nbsp;Under development!
 
-`npm install --save live-model`
+```tsx
+import { liveTable } from "live-model";
+import { useQuery } from "live-model/react";
 
-## TODO
+interface ToDo {
+    id: string;
+    title: string;
+}
 
-* Documentation
-    * Basic usage
-    * API Documentation
-    * Examples
-* Integrations
-    * Separate Firestore into its own project
-    * Separate JSData into its own project
-* Improvements
-    * Cache relations
-    * Don't require relations to be defined at data manager creation
-    * Allow relations to be included in queries
-* Possible new features
-    * Specify needed fields (like graphQL)
-    * Two-way object transformations
+const todosTable = liveTable<ToDo>("todos");
+
+export function App() {
+    const todos = useQuery(todosTable);
+    return (
+        <div>
+            <ul>
+                {todos.map((todo) => (
+                    <li key={todo.id}>{todo.title}</li>
+                ))}
+            </ul>
+            <button onClick={() => todosTable.add({ title: "New" })}>
+                Create To-Do
+            </button>
+        </div>
+    );
+}
+```
 
 ## Licence
 
-[MIT](https://github.com/andreterron/live-model/blob/master/LICENSE)
+[MIT](./LICENSE)

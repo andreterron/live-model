@@ -1,46 +1,25 @@
 {
-  "name": "live-model",
-  "version": "0.0.5",
-  "description": "Live Model",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "test-w": "mocha --reporter spec --require ts-node/register 'tests/**/*.test.{ts,js}' -w --watch-extensions js,ts",
-    "test": "mocha --reporter spec --require ts-node/register 'tests/**/*.test.{ts,js}'"
-  },
-  "keywords": [
-    "live",
-    "model",
-    "data",
-    "rx",
-    "observable"
-  ],
-  "repository": "git@github.com:andreterron/live-model.git",
-  "author": "André Terron <andrev.terron@gmail.com>",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/chai": "^4.0.6",
-    "@types/chai-as-promised": "^7.1.0",
-    "@types/core-js": "^0.9.43",
-    "@types/jasmine": "^2.8.2",
-    "@types/mocha": "^2.2.44",
-    "@types/node": "^8.0.53",
-    "@types/sinon": "^4.0.0",
-    "@types/sinon-chai": "^2.7.29",
-    "angular": "1.7.9",
-    "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
-    "core-js": "^2.5.1",
-    "mocha": "^4.0.1",
-    "sinon": "4.1.2",
-    "sinon-chai": "^2.14.0",
-    "ts-node": "^3.3.0",
-    "typescript": "^2.6.2"
-  },
-  "dependencies": {
-    "bluebird": "^3.5.1",
-    "firebase": "^4.8.2",
-    "js-data": "^3.0.1",
-    "rxjs": "^5.5.6"
-  }
+    "name": "live-model",
+    "version": "1.0.0-alpha.0",
+    "description": "Live Model",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "publish:alpha": "npm publish --tag alpha"
+    },
+    "keywords": [
+        "live",
+        "model",
+        "data",
+        "rx",
+        "observable",
+        "local-first"
+    ],
+    "repository": "git@github.com:andreterron/live-model.git",
+    "author": "André Terron <git@terron.me>",
+    "license": "MIT",
+    "devDependencies": {
+        "typescript": "^4.9.5"
+    }
 }
