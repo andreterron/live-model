@@ -1,10 +1,10 @@
 {
-  "name": "website-e2e",
+  "name": "@live-model/website-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "implicitDependencies": [
-      "website"
+      "@live-model/website"
     ]
   }
 }

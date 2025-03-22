@@ -1,5 +1,5 @@
 {
-  "name": "website",
+  "name": "@live-model/website",
   "private": true,
   "type": "module",
   "scripts": {},
@@ -8,7 +8,7 @@
   },
   "sideEffects": false,
   "nx": {
-    "name": "website"
+    "name": "@live-model/website"
   },
   "dependencies": {
     "@react-router/node": "^7.2.0",
