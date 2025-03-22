@@ -2,7 +2,9 @@
   "name": "@live-model/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "serve": "nx serve website"
+  },
   "private": true,
   "dependencies": {
     "@react-router/node": "^7.2.0",

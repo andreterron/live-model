@@ -2,7 +2,9 @@
   "name": "@live-model/website",
   "private": true,
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "serve": "vite"
+  },
   "engines": {
     "node": ">=20"
   },
