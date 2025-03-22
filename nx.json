@@ -68,7 +68,7 @@
   ],
   "targetDefaults": {
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "^build"]
     },
     "e2e-ci--**/*": {
       "dependsOn": ["^build"]
@@ -89,6 +89,11 @@
         "style": "tailwind",
         "linter": "eslint"
       }
+    }
+  },
+  "release": {
+    "version": {
+      "preVersionCommand": "npx nx run-many -t build"
     }
   }
 }
