@@ -24,13 +24,17 @@ jobs:
       # Uncomment this line to enable task distribution
       # - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
 
-      # Cache node_modules
+      # Cache pnpm modules
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ^10.0.0
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: 'pnpm'
 
-      - run: npm ci --legacy-peer-deps
+      - run: pnpm install --frozen-lockfile
       - run: npx playwright install --with-deps
       - uses: nrwl/nx-set-shas@v4
 
