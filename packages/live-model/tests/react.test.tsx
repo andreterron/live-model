@@ -3,8 +3,8 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import { useData } from '../src/lib/index.js';
-import { clearData, mockData } from './test-utils.js';
+import { useData } from '../src/index.js';
+import { clearData, mockData } from './test-utils/mock-data.js';
 
 describe('react', () => {
   describe('hook', () => {
