@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./out-tsc/vitest",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2019"],
     "types": [
       "vitest/globals",
       "vitest/importMeta",
@@ -18,14 +20,10 @@
     "vite.config.mts",
     "vitest.config.ts",
     "vitest.config.mts",
-    "tests/**/*.test.ts",
-    "tests/**/*.spec.ts",
-    "tests/**/*.test.tsx",
-    "tests/**/*.spec.tsx",
-    "tests/**/*.test.js",
-    "tests/**/*.spec.js",
-    "tests/**/*.test.jsx",
-    "tests/**/*.spec.jsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "tests/**/*.js",
+    "tests/**/*.jsx",
     "tests/**/*.d.ts"
   ],
   "references": [
