@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "serve": "nx serve website"
+    "serve": "nx serve website",
+    "test": "nx test live-model",
+    "dev": "nx dev live-model"
   },
   "private": true,
   "dependencies": {

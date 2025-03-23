@@ -1,4 +1,4 @@
-import { liveModel } from './live-model.js';
+import { liveModel } from '../src/lib/live-model.js';
 
 describe('liveModel', () => {
   it('should work', () => {

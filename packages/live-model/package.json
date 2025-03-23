@@ -17,5 +17,11 @@
     "dist",
     "!**/*.tsbuildinfo"
   ],
-  "dependencies": {}
+  "scripts": {
+    "dev": "vitest --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "usehooks-ts": "^3.1.1"
+  }
 }

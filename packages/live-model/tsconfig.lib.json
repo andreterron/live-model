@@ -4,6 +4,8 @@
     "baseUrl": ".",
     "rootDir": "src",
     "outDir": "dist",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2019"],
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": true,
     "module": "nodenext",
@@ -11,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "references": [],
   "exclude": [
     "vite.config.ts",
