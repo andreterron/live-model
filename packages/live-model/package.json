@@ -19,11 +19,12 @@
   ],
   "scripts": {
     "build": "vite build",
-    "dev": "vitest --watch",
+    "dev": "vitest --watch --reporter verbose",
     "test": "vitest"
   },
   "dependencies": {
-    "usehooks-ts": "^3.1.1"
+    "usehooks-ts": "^3.1.1",
+    "zod": "^3.24.2"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
