@@ -1,10 +1,13 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "declaration": true,
-        "outDir": "./dist",
-        "lib": ["es2017", "dom"]
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/website-e2e"
     },
-    "include": ["src/**/*"]
+    {
+      "path": "./apps/website"
+    }
+  ]
 }
