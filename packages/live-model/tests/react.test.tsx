@@ -8,6 +8,10 @@ import { clearData, mockData } from './test-utils/mock-data.js';
 
 describe('react', () => {
   describe('hook', () => {
+    beforeEach(() => {
+      mockData({ one: 1 });
+    });
+
     afterEach(() => {
       clearData();
     });
@@ -18,31 +22,23 @@ describe('react', () => {
     });
 
     test('existing keys return their value', async () => {
-      mockData({ key: 7 });
-
-      let { result } = renderHook(() => useData('key'));
-
-      expect(result.current.value).toBe(7);
-    });
-
-    test('values can be set', async () => {
-      mockData({ counter: 0 });
-
-      let { result } = renderHook(() => useData('counter'));
-
-      expect(result.current.value).toBe(0);
-
-      act(() => result.current.set(1));
+      let { result } = renderHook(() => useData('one'));
 
       expect(result.current.value).toBe(1);
     });
 
+    test('values can be set', async () => {
+      let { result } = renderHook(() => useData('one'));
+      expect(result.current.value).toBe(1);
+
+      act(() => result.current.set(2));
+
+      expect(result.current.value).toBe(2);
+    });
+
     test('values can be deleted', async () => {
-      mockData({ key: 7 });
-
-      let { result } = renderHook(() => useData('key'));
-
-      expect(result.current.value).toBe(7);
+      let { result } = renderHook(() => useData('one'));
+      expect(result.current.value).toBe(1);
 
       act(() => result.current.delete());
 
