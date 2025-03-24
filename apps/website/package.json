@@ -17,6 +17,7 @@
     "@react-router/node": "^7.2.0",
     "@react-router/serve": "^7.2.0",
     "isbot": "^4.4.0",
+    "live-model": "workspace:*",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router": "^7.2.0"

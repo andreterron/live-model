@@ -1,5 +1,8 @@
+import { useData } from 'live-model';
+
 export function App() {
-  return <div>Live Model</div>;
+  const { value } = useData('live-model', 1);
+  return <div>Live Model {value}</div>;
 }
 
 export default App;

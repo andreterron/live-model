@@ -177,6 +177,9 @@ importers:
       isbot:
         specifier: ^4.4.0
         version: 4.4.0
+      live-model:
+        specifier: workspace:*
+        version: link:../../packages/live-model
       react:
         specifier: 19.0.0
         version: 19.0.0
@@ -204,6 +207,12 @@ importers:
 
   packages/live-model:
     dependencies:
+      react:
+        specifier: ^18.0.0 || ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^18.0.0 || ^19.0.0
+        version: 19.0.0(react@19.0.0)
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.0.0)

@@ -3,6 +3,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../packages/live-model"
+    },
+    {
       "path": "./tsconfig.app.json"
     },
     {
