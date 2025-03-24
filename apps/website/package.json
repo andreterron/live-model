@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "serve": "vite"
+    "serve": "vite",
+    "dev": "pnpm run serve"
   },
   "engines": {
     "node": ">=20"
