@@ -1,7 +1,7 @@
 'use client';
 
 import { useData } from 'live-model';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 interface CellProps {
   row: number;
