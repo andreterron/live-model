@@ -15,8 +15,8 @@ export function Cell({ row, col }: CellProps) {
 
   return (
     <div
-      className={`w-8 h-8 rounded-full border-2 border-current mx-auto cursor-pointer transition-colors
-        ${value ? 'bg-current/50' : ''}`}
+      className={`w-8 h-8 rounded-full border-2 border-current mx-auto cursor-pointer
+        ${value ? 'bg-current/50' : 'bg-transparent'}`}
       onClick={() => set(!value)}
     ></div>
   );
