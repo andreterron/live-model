@@ -4,16 +4,13 @@
   "files": [],
   "references": [
     {
+      "path": "./apps/website"
+    },
+    {
       "path": "./apps/website-e2e"
     },
     {
-      "path": "./apps/website-gen"
-    },
-    {
       "path": "./packages/live-model"
-    },
-    {
-      "path": "./apps/website"
     }
   ]
 }
