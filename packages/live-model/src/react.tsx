@@ -6,14 +6,28 @@ export type UseDataReturn<T> = {
   delete: () => void;
 };
 
-export function useData<T>(key: string): UseDataReturn<T | undefined>;
-export function useData<T>(key: string, defaultValue: T): UseDataReturn<T>;
+export interface UseDataOptions {
+  initializeWithValue?: boolean;
+}
+
 export function useData<T>(
   key: string,
-  defaultValue?: T
+  defaultValue?: undefined,
+  options?: UseDataOptions
+): UseDataReturn<T | undefined>;
+export function useData<T>(
+  key: string,
+  defaultValue: T,
+  options?: UseDataOptions
+): UseDataReturn<T>;
+export function useData<T>(
+  key: string,
+  defaultValue?: T,
+  { initializeWithValue = false }: UseDataOptions = {}
 ): UseDataReturn<T | undefined> {
+  // TODO: Read initializeWithValue from Context
   const [value, setValue, removeValue] = useLocalStorage(key, defaultValue, {
-    initializeWithValue: typeof window !== 'undefined',
+    initializeWithValue,
   });
   return { value, set: setValue, delete: removeValue };
 }
