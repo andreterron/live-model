@@ -1,11 +1,15 @@
-# live-model
+# Live Model
 
-This library was generated with [Nx](https://nx.dev).
+Live Model is a library to sync data between client and server.
 
-## Building
+This is currently a playground to explore developer interfaces
 
-Run `nx build live-model` to build the library.
+## Installation
 
-## Running unit tests
+```bash
+npm i live-model
+```
 
-Run `nx test live-model` to execute the unit tests via [Vitest](https://vitest.dev/).
+## Licence
+
+MIT
