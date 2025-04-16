@@ -1,4 +1,6 @@
 import { ZodType } from 'zod';
+import { Live, LocalStorageLive } from './live.js';
+import { genId } from './id.js';
 
 export type ObjectFromDef<DEF> = DEF extends {}
   ? {
@@ -51,14 +53,33 @@ export type PropDef<TYPE, CREATE = TYPE> = {
 };
 
 export type CalculatedPropDef<DEF, S> = PropDef<S, never> & {
+  kind: 'calculated';
   fn: (values: ObjectFromDef<DEF>) => S;
 };
 
+export type ActionPropDef<DEF, S> = PropDef<S, never> & {
+  kind: 'action';
+  fn: (values: ObjectFromDef<DEF>) => S;
+};
+
+export type AnyPropDef<DEF, S> =
+  | CalculatedPropDef<DEF, S>
+  | ActionPropDef<DEF, S>;
+
 export type TypeDef<DEF> = {
-  create(values: CreateParam<DEF>): ObjectFromDef<DEF>;
+  // TODO: Remove `| undefined`
+  create(values: CreateParam<DEF>): Live<ObjectFromDef<DEF> | undefined>;
+  getOrCreate(
+    id: string,
+    createValues: CreateParam<DEF>
+  ): Live<ObjectFromDef<DEF> | undefined>;
+  // TODO: This definition doesn't support model<boolean | number | string>, because we always assume T is an object.
+  // TODO: actions and value types might need to be separate
+  // TODO: a "calculated property" might not make sense for native types... right?
   extend<T>(
     extendDef: (params: {
       calc: <S>(fn: (values: ObjectFromDef<DEF>) => S) => PropDef<S, never>;
+      action: <S>(fn: (values: ObjectFromDef<DEF>) => S) => PropDef<S, never>;
     }) => T
   ): TypeDef<Merge<DEF, Extended<T>>>;
 };
@@ -69,6 +90,10 @@ export function model<DEF>(def: DEF, extensions?: any[]): TypeDef<DEF>;
 export function model<DEF>(def?: DEF, extensions: any[] = []): TypeDef<DEF> {
   return {
     create(values) {
+      // TODO: A model may specify the ID generation. A model may need to
+      //       specify some kind of "prefix", "domain" or "namespace".
+      // TODO: Change `(values as any).__id`
+      const id = (values as any).__id || genId();
       // TODO: Type
       let obj: any = values;
       if (def && typeof def === 'object') {
@@ -93,7 +118,24 @@ export function model<DEF>(def?: DEF, extensions: any[] = []): TypeDef<DEF> {
           }
         }
       }
-      return obj;
+      // TODO: Review how we're saving to localStorage
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(id, JSON.stringify(obj));
+      }
+      // TODO: Can the type of Live (normal, localstorage, db, etc) be customizable?
+      // TODO: Set the value of localstorage to the object
+      // TODO: Is .create the right function? Feels like it's more "reading" the value from localStorage instead of creating.
+      return new LocalStorageLive(id);
+    },
+    // TODO: This reads like a hack. Maybe a `createIfEmpty` option on `.get`, or a wrapper
+    getOrCreate(id, createValues) {
+      if (
+        typeof localStorage === 'undefined' ||
+        localStorage.getItem(id) !== null
+      ) {
+        return new LocalStorageLive(id);
+      }
+      return this.create({ ...createValues, __id: id });
     },
     extend(def) {
       // TODO: CalculatedPropDef<S> = PropDef<S, never> & { fn }
@@ -104,8 +146,18 @@ export function model<DEF>(def?: DEF, extensions: any[] = []): TypeDef<DEF> {
         ): CalculatedPropDef<DEF, S> => {
           return {
             _type: undefined as S,
+            kind: 'calculated',
             fn,
           } as CalculatedPropDef<DEF, S>;
+        },
+        action: <S>(
+          fn: (values: ObjectFromDef<DEF>) => S
+        ): ActionPropDef<DEF, S> => {
+          return {
+            _type: undefined as S,
+            kind: 'action',
+            fn,
+          } as ActionPropDef<DEF, S>;
         },
       });
       return model(def, [...extensions, extension]) as any;

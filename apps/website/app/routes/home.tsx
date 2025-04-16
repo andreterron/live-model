@@ -1,3 +1,5 @@
+import { ToggleSample } from '../components/samples/01-toggle';
+import { DerivedSample } from '../components/samples/02-derived';
 import type { Route } from './+types/home';
 import { Cell } from '~/components/Cell';
 
@@ -20,7 +22,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="overflow-auto">
+      {/* <div className="overflow-auto">
         <table className="w-fit">
           <thead>
             <tr>
@@ -51,6 +53,19 @@ export default function Home() {
           </tbody>
         </table>
       </div>
+      <hr /> */}
+      <div className="prose mb-4">
+        <h1 className="text-2xl font-bold mb-4">Live Model</h1>
+        <h2 className="text-lg font-semibold mb-2">1. One "bit"</h2>
+        <p>
+          Go ahead, toggle it! The value is persisted between page refreshes.
+        </p>
+      </div>
+      <ToggleSample />
+      <div className="prose mb-4 mt-10">
+        <h2 className="text-lg font-semibold mb-2">2. Derived "bit"</h2>
+      </div>
+      <DerivedSample />
     </div>
   );
 }
