@@ -1,0 +1,15 @@
+# Development files
+src/
+tests/
+eslint.config.mjs
+tsconfig.json
+tsconfig.*.json
+vite.config.ts
+
+# npm pack
+*.tgz
+
+# Commonly ignored files
+.env
+node_modules
+.DS_Store

@@ -6,7 +6,8 @@
     "serve": "nx serve website",
     "test": "nx test live-model",
     "build": "nx run-many --target=build --all --maxParallel=100 --output-style stream",
-    "dev": "nx run-many --target=dev --target=watch --all --maxParallel=100 --output-style stream"
+    "dev": "nx run-many --target=dev --target=watch --all --maxParallel=100 --output-style stream",
+    "release": "nx run-many --target=release --all --maxParallel=100 --output-style stream"
   },
   "private": true,
   "dependencies": {
