@@ -1,33 +1,40 @@
 import { useLocalStorage } from 'usehooks-ts';
 
-export type UseDataReturn<T> = {
-  value: T;
-  set: React.Dispatch<React.SetStateAction<T | undefined>>;
-  delete: () => void;
-};
-
-export interface UseDataOptions {
+export interface UseLiveStateOptions {
   initializeWithValue?: boolean;
 }
 
-export function useData<T>(
+export function useLiveState(
   key: string,
-  defaultValue?: undefined,
-  options?: UseDataOptions
-): UseDataReturn<T | undefined>;
-export function useData<T>(
+  options?: UseLiveStateOptions
+): {
+  value: any;
+  setValue: React.Dispatch<React.SetStateAction<any>>;
+};
+export function useLiveState<T>(
+  key: string,
+  options?: UseLiveStateOptions
+): {
+  value: T | undefined;
+  setValue: React.Dispatch<React.SetStateAction<T | undefined>>;
+};
+export function useLiveState<T>(
   key: string,
   defaultValue: T,
-  options?: UseDataOptions
-): UseDataReturn<T>;
-export function useData<T>(
+  options?: UseLiveStateOptions
+): { value: T; setValue: React.Dispatch<React.SetStateAction<T | undefined>> };
+export function useLiveState<T = unknown>(
   key: string,
   defaultValue?: T,
-  { initializeWithValue = false }: UseDataOptions = {}
-): UseDataReturn<T | undefined> {
-  // TODO: Read initializeWithValue from Context
-  const [value, setValue, removeValue] = useLocalStorage(key, defaultValue, {
-    initializeWithValue,
-  });
-  return { value, set: setValue, delete: removeValue };
+  options?: UseLiveStateOptions
+): {
+  value: T | undefined;
+  setValue: React.Dispatch<React.SetStateAction<T | undefined>>;
+} {
+  const [value, setValue] = useLocalStorage(key, defaultValue, options);
+
+  return {
+    value,
+    setValue,
+  };
 }

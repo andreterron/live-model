@@ -20,6 +20,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vitest --watch --reporter verbose",
+    "watch": "vite build --no-watch.clearScreen",
     "test": "vitest"
   },
   "dependencies": {

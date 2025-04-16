@@ -12,6 +12,7 @@ export default defineConfig(() => ({
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
     }),
   ],
+  clearScreen: false,
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
@@ -36,7 +37,13 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: [/node_modules/],
+      // external: [/node_modules/, 'react'],
+      // TODO: Improve external function.
+      external: (
+        source: string,
+        importer: string | undefined,
+        isResolved: boolean
+      ) => !source.match(/\.[tj]sx?$/),
     },
   },
   test: {

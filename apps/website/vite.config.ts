@@ -30,6 +30,9 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
     },
+    watch: {
+      clearScreen: false,
+    },
   },
   // test: {
   //   watch: false,
