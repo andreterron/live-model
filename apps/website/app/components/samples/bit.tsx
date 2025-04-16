@@ -18,3 +18,20 @@ export function Bit({
     </div>
   );
 }
+
+export function LabeledBit({
+  value,
+  onClick,
+  label,
+}: {
+  value: boolean;
+  onClick: React.MouseEventHandler;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1 w-11">
+      <Bit value={value} onClick={onClick} />
+      <span className="text-xs font-mono">{label}</span>
+    </div>
+  );
+}

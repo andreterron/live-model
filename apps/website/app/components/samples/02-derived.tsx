@@ -1,5 +1,5 @@
 import { setter, useDerived, useLiveState } from 'live-model';
-import { Bit } from './bit';
+import { Bit, LabeledBit } from './bit';
 import { ArrowRight } from 'lucide-react';
 
 export function DerivedSample() {
@@ -11,18 +11,12 @@ export function DerivedSample() {
   );
   return (
     <div className="flex items-center gap-1">
-      <div className="flex flex-col items-center gap-1 w-11">
-        <Bit value={value} onClick={() => setValue(!value)} />
-        <span className="text-xs font-mono">A</span>
-      </div>
+      <LabeledBit label="A" value={value} onClick={() => setValue(!value)} />
       <div className="flex flex-col items-center gap-1">
         <ArrowRight />
         <span className="text-xs font-mono">&nbsp;</span>
       </div>
-      <div className="flex flex-col items-center gap-1 w-11">
-        <Bit value={notA} onClick={() => setNotA(!notA)} />
-        <span className="text-xs font-mono">not(A)</span>
-      </div>
+      <LabeledBit label="not(A)" value={notA} onClick={() => setNotA(!notA)} />
     </div>
   );
 }
