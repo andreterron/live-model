@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Live } from '../live.js';
 import { HookReturn } from './hook-types.js';
 import { LiveSetter } from '../setter.js';
+import { map } from '../operators/map.js';
 
 /**
  * @param live source of values
@@ -11,36 +12,16 @@ import { LiveSetter } from '../setter.js';
  */
 export function useDerived<T, U>(
   live: Live<T>,
-  transform: (value: T | undefined) => U,
+  transform: (value: T) => U,
   setter?: LiveSetter<T, U>
 ): HookReturn<U> {
-  const v = live.get();
-  const u = useMemo(() => {
-    return transform(v);
-  }, [v]);
+  const derived: Live<U> = useMemo(() => map(live, transform, setter), [live]);
 
-  const setValue = useCallback(
-    (u: U) => {
-      if (!setter) {
-        // no-op
-        return;
-      }
-
-      setter(u, live);
-    },
-    [live]
-  );
-
-  const derived: Live<U> = useMemo(
-    () => ({
-      get: () => u,
-      setValue,
-    }),
-    [u, setValue]
-  );
+  const value = derived.get();
+  const setValue = useCallback((u: U) => derived.setValue(u), [derived]);
 
   return {
-    value: u,
+    value,
     setValue,
     live: derived,
   };

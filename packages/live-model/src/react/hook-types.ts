@@ -1,9 +1,9 @@
 import { Live } from '../live.js';
 
-export interface HookReturn<T, OPT = T> {
-  value: OPT;
+export interface HookReturn<T> {
+  value: T;
   live: Live<T>;
 
   // Actions
-  setValue: (value: OPT) => void;
+  setValue: (value: T) => void;
 }

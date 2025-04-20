@@ -1,5 +1,5 @@
 export interface Live<T> {
-  get(): T | undefined;
+  get(): T;
 
   // Actions
   setValue(value: T): void;

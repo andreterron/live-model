@@ -1,5 +1,6 @@
 import { Live } from './live.js';
 
+// TODO: This isn't generic enough
 export type LiveSetter<T, U> = (value: U, source: Live<T>) => void;
 
 export const setter = {
