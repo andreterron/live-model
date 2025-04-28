@@ -1,7 +1,7 @@
-import { map, value } from '../../src/index.js';
+import { map, SettableMemoryLive } from '../../src/index.js';
 
 describe('operator map', () => {
-  let source = value(1);
+  let source = new SettableMemoryLive(1);
 
   test('returns a transformed value', async () => {
     // Setup

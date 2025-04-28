@@ -1,5 +1,6 @@
 import { ToggleSample } from '../components/samples/01-toggle';
 import { DerivedSample } from '../components/samples/02-derived';
+import { ReactivitySample } from '../components/samples/03-reactivity';
 import type { Route } from './+types/home';
 
 export function meta({}: Route.MetaArgs) {
@@ -28,6 +29,12 @@ export default function Home() {
         <h2 className="text-lg font-semibold mb-2">2. Derived "bit"</h2>
       </div>
       <DerivedSample />
+      <div className="prose mb-4 mt-10">
+        <h2 className="text-lg font-semibold mb-2">
+          3. Local Storage Reactivity
+        </h2>
+      </div>
+      <ReactivitySample />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 
 import type { Route } from './+types/root';
 import './app.css';
+import { ThemeProvider } from './components/theme-provider';
 
 export const links: Route.LinksFunction = () => [];
 
@@ -23,6 +24,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       {/* suppressHydrationWarning because of CollorZilla extension */}
       <body suppressHydrationWarning>
+        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+          {children}
+        </ThemeProvider>
         {children}
         <ScrollRestoration />
         <Scripts />

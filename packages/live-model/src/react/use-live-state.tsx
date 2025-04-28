@@ -1,7 +1,7 @@
-import { useLocalStorage } from 'usehooks-ts';
-import { Live } from '../live.js';
 import { HookReturn } from './hook-types.js';
 import { useMemo } from 'react';
+import { LocalStorageLive } from '../creators/local-storage-live.js';
+import { useSubscribe } from './use-subscribe.js';
 
 export interface UseLiveStateOptions {
   initializeWithValue?: boolean;
@@ -27,19 +27,15 @@ export function useLiveState<T = unknown>(
   defaultValue?: T,
   options?: UseLiveStateOptions
 ): HookReturn<T | undefined> {
-  const [value, setValue] = useLocalStorage(key, defaultValue, {
-    initializeWithValue: options?.initializeWithValue,
-  });
-
-  const live: Live<T | undefined> = useMemo(
-    () => ({
-      get: () => value,
-      setValue(value) {
-        setValue(value);
-      },
-    }),
-    [value, setValue]
+  const live = useMemo(
+    () =>
+      new LocalStorageLive<T | undefined>(key, defaultValue, {
+        initializeWithValue: options?.initializeWithValue,
+      }),
+    [key]
   );
+
+  const { value, setValue } = useSubscribe(live);
 
   return {
     value,

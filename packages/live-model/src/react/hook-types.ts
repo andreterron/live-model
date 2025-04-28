@@ -1,9 +1,12 @@
 import { Live } from '../live.js';
 
-export interface HookReturn<T> {
+export interface SubscribeHookReturn<T> {
   value: T;
-  live: Live<T>;
 
   // Actions
   setValue: (value: T) => void;
+}
+
+export interface HookReturn<T> extends SubscribeHookReturn<T> {
+  live: Live<T>;
 }

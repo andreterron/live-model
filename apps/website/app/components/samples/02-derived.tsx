@@ -11,12 +11,12 @@ export function DerivedSample() {
   );
   return (
     <div className="flex items-center gap-1">
-      <LabeledBit label="A" value={value} onClick={() => setValue(!value)} />
+      <LabeledBit label="A" value={value} onChange={(v) => setValue(v)} />
       <div className="flex flex-col items-center gap-1">
         <ArrowRight />
         <span className="text-xs font-mono">&nbsp;</span>
       </div>
-      <LabeledBit label="not(A)" value={notA} onClick={() => setNotA(!notA)} />
+      <LabeledBit label="not(A)" value={notA} onChange={(v) => setNotA(v)} />
     </div>
   );
 }
