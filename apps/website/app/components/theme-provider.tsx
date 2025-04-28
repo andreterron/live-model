@@ -50,13 +50,25 @@ export function ThemeProvider({
     root.classList.remove('light', 'dark');
 
     if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light';
+      const match = window.matchMedia('(prefers-color-scheme: dark)');
 
-      root.classList.add(systemTheme);
-      return;
+      function setTheme(match: { matches: boolean }) {
+        root.classList.remove('light', 'dark');
+        const systemTheme = match.matches ? 'dark' : 'light';
+
+        root.classList.add(systemTheme);
+      }
+
+      function handleThemeChange(event: MediaQueryListEventMap['change']) {
+        setTheme(event);
+      }
+
+      match.addEventListener('change', handleThemeChange);
+      setTheme(match);
+
+      return () => {
+        match.removeEventListener('change', handleThemeChange);
+      };
     }
 
     root.classList.add(theme);
