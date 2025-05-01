@@ -1,5 +1,6 @@
 import { SettableMemoryLive } from '../../src/index.js';
 import { awaitableFn } from '../test-utils/wait-for-call.js';
+import { vi } from 'vitest';
 
 describe('reactivity', () => {
   test('subscribers get a callback when the value changes', async () => {
@@ -24,7 +25,7 @@ describe('reactivity', () => {
   test('subscribers are called synchronously during subscription', () => {
     // Setup
     const live = new SettableMemoryLive(1);
-    const next = awaitableFn();
+    const next = vi.fn();
     const sub = live.subscribe({ next });
     expect(next).toHaveBeenCalledExactlyOnceWith(1);
     next.mockClear();
