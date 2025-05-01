@@ -4,8 +4,6 @@ import { MockResult } from '@vitest/spy';
 
 type Procedure = (...args: any[]) => any;
 
-// TODO: Improve typing if needed
-
 type EmitterMockEventMap = {
   call: [{ args: any[] }];
   return: [{ args: any[]; result: any }];
@@ -26,7 +24,6 @@ interface WaitForOptions {
   timeoutMs?: number;
 }
 
-// TODO: This only is useful if we can look at previous calls as well
 export function awaitableFn<T extends Procedure = Procedure>(
   implementation?: T
 ): EmitterMock<T> {
