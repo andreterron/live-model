@@ -20,4 +20,22 @@ describe('reactivity', () => {
     // Teardown
     sub.unsubscribe();
   });
+
+  test('subscribers are called synchronously during subscription', () => {
+    // Setup
+    const live = new SettableMemoryLive(1);
+    const next = awaitableFn();
+    const sub = live.subscribe({ next });
+    expect(next).toHaveBeenCalledExactlyOnceWith(1);
+    next.mockClear();
+
+    // Test
+    live.setValue(2);
+
+    // Verify
+    expect(next).toHaveBeenCalledExactlyOnceWith(2);
+
+    // Teardown
+    sub.unsubscribe();
+  });
 });
