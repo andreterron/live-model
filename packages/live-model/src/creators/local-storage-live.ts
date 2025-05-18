@@ -33,51 +33,57 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   }
 
   protected readFromLocalStorage(): { value: T; changed: boolean } {
-    const serialized = localStorage.getItem(this.key);
-    if (serialized === this.lastSerializedValue) {
-      return { value: this.value ?? this.defaultValue, changed: false };
-    }
-
-    this.lastSerializedValue = serialized;
-    if (!serialized) {
-      this.value = undefined;
-      return { value: this.defaultValue, changed: true };
-    }
-
     try {
-      const deserialized = JSON.parse(serialized);
-      if (!this.options.validator) {
-        this.value = deserialized as T;
-        return { value: this.value, changed: true };
+      const serialized = localStorage.getItem(this.key);
+      if (serialized === this.lastSerializedValue) {
+        return { value: this.value ?? this.defaultValue, changed: false };
       }
 
-      // Validator
-      this.value = this.options.validator.parse(deserialized);
-      return {
-        value: this.value,
-        changed: true,
-      };
-    } catch (e) {
-      console.error(
-        `[LiveModel] Failed to read value from localStorage. Key "${this.key}" had string "${serialized}"\n`,
-        e
-      );
+      this.lastSerializedValue = serialized;
+      if (!serialized) {
+        this.value = undefined;
+        return { value: this.defaultValue, changed: true };
+      }
 
       try {
-        if (this.options.onReadError === 'remove') {
-          localStorage.removeItem(this.key);
-        } else if (this.options.onReadError === 'save_default') {
-          localStorage.setItem(this.key, JSON.stringify(this.defaultValue));
-        } else if (typeof this.options.onReadError === 'function') {
-          this.options.onReadError(e);
+        const deserialized = JSON.parse(serialized);
+        if (!this.options.validator) {
+          this.value = deserialized as T;
+          return { value: this.value, changed: true };
         }
-      } catch (e2) {
+
+        // Validator
+        this.value = this.options.validator.parse(deserialized);
+        return {
+          value: this.value,
+          changed: true,
+        };
+      } catch (e) {
         console.error(
-          '[LiveModel] Error trying to recover from the previous error'
+          `[LiveModel] Failed to read value from localStorage. Key "${this.key}" had string "${serialized}"\n`,
+          e
         );
+
+        try {
+          if (this.options.onReadError === 'remove') {
+            localStorage.removeItem(this.key);
+          } else if (this.options.onReadError === 'save_default') {
+            localStorage.setItem(this.key, JSON.stringify(this.defaultValue));
+          } else if (typeof this.options.onReadError === 'function') {
+            this.options.onReadError(e);
+          }
+        } catch (e2) {
+          console.error(
+            '[LiveModel] Error trying to recover from the previous error',
+            e2
+          );
+        }
+        this.value = undefined;
+        return { value: this.defaultValue, changed: true };
       }
-      this.value = undefined;
-      return { value: this.defaultValue, changed: true };
+    } catch (error) {
+      console.log('[LiveModel] Failed to use localStorage');
+      return { value: this.defaultValue, changed: false };
     }
   }
 
