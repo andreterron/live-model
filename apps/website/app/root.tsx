@@ -27,7 +27,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
           {children}
         </ThemeProvider>
-        {children}
         <ScrollRestoration />
         <Scripts />
       </body>

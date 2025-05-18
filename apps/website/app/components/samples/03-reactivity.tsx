@@ -17,7 +17,7 @@ export function ReactivitySample() {
   return (
     <div className="flex flex-col gap-3">
       <Card className="max-w-md divide-y">
-        <CardRow label={<em>toggle_C</em>}>
+        <CardRow label="toggle_C">
           <BooleanControl value={v1} onChange={(v) => setV1(v)} />
         </CardRow>
       </Card>
@@ -31,7 +31,7 @@ export function ReactivitySample() {
         </span>
       </div>
       <Card className="max-w-md divide-y">
-        <CardRow label={<em>toggle_C</em>}>
+        <CardRow label="toggle_C">
           <BooleanControl value={v2} onChange={(v) => setV2(v)} />
         </CardRow>
       </Card>

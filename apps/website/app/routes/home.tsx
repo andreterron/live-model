@@ -1,7 +1,7 @@
 import { ToggleSample } from '../components/samples/01-toggle';
 import { DerivedSample } from '../components/samples/02-derived';
 import { ReactivitySample } from '../components/samples/03-reactivity';
-import { Card } from '../components/ui/card';
+import { CollectionsSample } from '../components/samples/04-collections';
 import type { Route } from './+types/home';
 
 export function meta({}: Route.MetaArgs) {
@@ -34,6 +34,12 @@ export default function Home() {
         <h2 className="text-lg font-semibold mb-2">3. Reactivity</h2>
       </div>
       <ReactivitySample />
+      <div className="prose mb-4 mt-10">
+        <h2 className="text-lg font-semibold mb-2">4. Collections</h2>
+      </div>
+      <CollectionsSample />
+      {/* Blank space at the bottom to avoid the screen moving as collections grow/shrink */}
+      <div className="h-96" />
     </div>
   );
 }

@@ -7,7 +7,7 @@ export function ToggleSample() {
   const { value, setValue } = useLiveState('01-toggle', false);
   return (
     <Card className="max-w-md divide-x">
-      <CardRow label={<em>toggle_A</em>}>
+      <CardRow label="toggle_A">
         <BooleanControl value={value} onChange={(v) => setValue(v)} />
       </CardRow>
     </Card>

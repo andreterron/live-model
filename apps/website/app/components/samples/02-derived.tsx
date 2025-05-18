@@ -13,7 +13,7 @@ export function DerivedSample() {
 
   return (
     <Card className="max-w-md divide-y">
-      <CardRow label={<em>toggle_B</em>}>
+      <CardRow label="toggle_B">
         <BooleanControl value={value} onChange={(v) => setValue(v)} />
       </CardRow>
       <CardRow
