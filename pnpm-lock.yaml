@@ -75,9 +75,6 @@ importers:
       '@testing-library/dom':
         specifier: 10.4.0
         version: 10.4.0
-      '@testing-library/react':
-        specifier: 16.1.0
-        version: 16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@types/node':
         specifier: ^20.0.0
         version: 20.17.28
@@ -246,6 +243,16 @@ importers:
       zod:
         specifier: ^3.0.0
         version: 3.24.3
+    devDependencies:
+      '@testing-library/react':
+        specifier: 16.1.0
+        version: 16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@vitest/spy':
+        specifier: ^3.0.0
+        version: 3.0.9
+      vitest:
+        specifier: ^3.0.0
+        version: 3.0.9(@types/node@20.17.28)(@vitest/ui@3.0.9)(jiti@2.4.2)(jsdom@22.1.0)(lightningcss@1.29.2)(terser@5.39.0)(yaml@2.7.0)
 
 packages:
 
@@ -10370,15 +10377,15 @@ snapshots:
       lz-string: 1.5.0
       pretty-format: 27.5.1
 
-  '@testing-library/react@16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
+  '@testing-library/react@16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@babel/runtime': 7.27.0
       '@testing-library/dom': 10.4.0
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
     optionalDependencies:
-      '@types/react': 19.0.0
-      '@types/react-dom': 19.0.0
+      '@types/react': 19.0.12
+      '@types/react-dom': 19.0.4(@types/react@19.0.12)
 
   '@tokenizer/token@0.3.0': {}
 

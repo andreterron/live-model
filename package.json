@@ -35,7 +35,6 @@
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@testing-library/dom": "10.4.0",
-    "@testing-library/react": "16.1.0",
     "@types/node": "^20.0.0",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
