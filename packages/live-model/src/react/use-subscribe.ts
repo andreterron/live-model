@@ -2,22 +2,31 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Live } from '../live.js';
 import { SubscribeHookReturn } from './hook-types.js';
 
+export interface UseSubscribeOptions<T> {
+  /**
+   * Function to get an identifier for this live. Useful if the JS object
+   * changes, even though it represents the same underlying data.
+   */
+  equalityKey?: (live: Live<T>) => string;
+}
+
 /**
  * @param live source of values
- * @param transform function that transforms the value from source to destination
- * @param setter use setter.noop (=== undefined), setter.passthrough(), setter.transform(_) or setter.handler(_).
- * NOTE: Updating this parameter will not update the setter for the derived value. If you need that, please create a GitHub issue.
+ * @param options customize the behavior of useSubscribe
  */
-export function useSubscribe<T>(live: Live<T>): SubscribeHookReturn<T> {
+export function useSubscribe<T>(
+  live: Live<T>,
+  options?: UseSubscribeOptions<T>
+): SubscribeHookReturn<T> {
   const [value, setV] = useState(live.get());
+  const firstRef = useRef(true);
 
   useEffect(() => {
-    let first = true;
     const sub = live.subscribe({
       next(v) {
         // Skips first value since we used live.get() to get it.
-        if (first) {
-          first = false;
+        if (firstRef.current) {
+          firstRef.current = false;
           return;
         }
 
@@ -28,7 +37,7 @@ export function useSubscribe<T>(live: Live<T>): SubscribeHookReturn<T> {
     return () => {
       sub.unsubscribe();
     };
-  }, []);
+  }, [options?.equalityKey ? options.equalityKey(live) : live]);
 
   const setValue = useCallback((v: T) => live.setValue(v), [live]);
 
