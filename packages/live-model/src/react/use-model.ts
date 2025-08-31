@@ -3,10 +3,11 @@ import { AnyLiveModelType, LiveModelType, Model } from '../model/model.js';
 import { useSubscribe } from './use-subscribe.js';
 
 function useModelDefinition<T extends LiveModelType = AnyLiveModelType>(
-  key: string
+  modelOrKey: string | Model<T>
 ) {
   return useMemo(() => {
-    const model = new Model<T>(key);
+    const model =
+      typeof modelOrKey === 'string' ? new Model<T>(modelOrKey) : modelOrKey;
     return {
       model,
       live: model.selectAll(),
@@ -14,13 +15,13 @@ function useModelDefinition<T extends LiveModelType = AnyLiveModelType>(
       deleteById: model.deleteById.bind(model),
       updateById: (id: string, v: T) => model.selectById(id).setValue(v),
     };
-  }, [key]);
+  }, [modelOrKey]);
 }
 
 export function useModel<T extends LiveModelType = AnyLiveModelType>(
-  key: string
+  modelOrKey: string | Model<T>
 ) {
-  const result = useModelDefinition<T>(key);
+  const result = useModelDefinition<T>(modelOrKey);
 
   const { value: items, setValue: setItems } = useSubscribe(result.live);
 
@@ -32,10 +33,10 @@ export function useModel<T extends LiveModelType = AnyLiveModelType>(
 }
 
 export function useModelItem<T extends LiveModelType = AnyLiveModelType>(
-  modelKey: string,
+  modelOrKey: string | Model<T>,
   id: string
 ) {
-  const { model } = useModelDefinition<T>(modelKey);
+  const { model } = useModelDefinition<T>(modelOrKey);
   const live = useMemo(() => model.selectById(id), [model, id]);
   const { value: item, setValue: setItem } = useSubscribe(live);
 
