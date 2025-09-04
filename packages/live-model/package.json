@@ -1,6 +1,6 @@
 {
   "name": "live-model",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -22,7 +22,7 @@
     "dev": "vitest --watch --reporter verbose",
     "watch": "vite build --watch",
     "test": "vitest",
-    "release": "pnpm publish",
+    "release": "rm -rf dist && pnpm build && pnpm publish",
     "prepack": "cp ../../README.md ."
   },
   "devDependencies": {
