@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Live } from '../live.js';
 import { SubscribeHookReturn } from './hook-types.js';
 
@@ -18,28 +18,27 @@ export function useSubscribe<T>(
   live: Live<T>,
   options?: UseSubscribeOptions<T>
 ): SubscribeHookReturn<T> {
-  const [value, setV] = useState(live.get());
-  const firstRef = useRef(true);
-
-  useEffect(() => {
-    const sub = live.subscribe({
-      next(v) {
-        // Skips first value since we used live.get() to get it.
-        if (firstRef.current) {
-          firstRef.current = false;
-          return;
-        }
-
-        // Future values are set to state
-        setV(v);
+  const [subscribe, getSnapshot, setValue] = useMemo(
+    () => [
+      (onStoreChange: () => void) => {
+        const sub = live.subscribe({
+          next() {
+            onStoreChange();
+          },
+        });
+        return () => {
+          sub.unsubscribe();
+        };
       },
-    });
-    return () => {
-      sub.unsubscribe();
-    };
-  }, [options?.equalityKey ? options.equalityKey(live) : live]);
+      () => live.get(),
+      (v: T) => {
+        live.setValue(v);
+      },
+    ],
+    [options?.equalityKey ? options.equalityKey(live) : live]
+  );
 
-  const setValue = useCallback((v: T) => live.setValue(v), [live]);
+  const value = useSyncExternalStore(subscribe, getSnapshot);
 
   return {
     value,
