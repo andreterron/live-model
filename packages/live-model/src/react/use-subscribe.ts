@@ -38,7 +38,7 @@ export function useSubscribe<T>(
     [options?.equalityKey ? options.equalityKey(live) : live]
   );
 
-  const value = useSyncExternalStore(subscribe, getSnapshot);
+  const value = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   return {
     value,
