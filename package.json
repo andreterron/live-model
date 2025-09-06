@@ -7,7 +7,8 @@
     "test": "nx test live-model",
     "build": "nx run-many --target=build --all --maxParallel=100 --output-style stream",
     "dev": "nx run-many --target=dev --target=watch --all --maxParallel=100 --output-style stream",
-    "release": "nx run-many --target=release --all --maxParallel=100 --output-style stream"
+    "release": "nx run-many --target=release --all --maxParallel=1 --parallel=false",
+    "release:manual": "nx run live-model:release"
   },
   "private": true,
   "dependencies": {

@@ -22,7 +22,7 @@
     "dev": "vitest --watch --reporter verbose",
     "watch": "vite build --watch",
     "test": "vitest",
-    "release": "rm -rf dist && pnpm build && pnpm publish",
+    "release": "rm -rf dist && pnpm build && pnpm publish --no-git-checks",
     "prepack": "cp ../../README.md ."
   },
   "devDependencies": {
