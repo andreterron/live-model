@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@react-router/node':
-        specifier: ^7.2.0
-        version: 7.4.0(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
+        specifier: ^7.9.4
+        version: 7.9.4(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
       '@react-router/serve':
         specifier: ^7.2.0
         version: 7.4.0(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
@@ -166,8 +166,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@react-router/node':
-        specifier: ^7.4.0
-        version: 7.4.0(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
+        specifier: ^7.9.4
+        version: 7.9.4(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
       '@react-router/serve':
         specifier: ^7.4.0
         version: 7.4.0(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
@@ -2367,6 +2367,16 @@ packages:
       typescript:
         optional: true
 
+  '@react-router/node@7.9.4':
+    resolution: {integrity: sha512-sdeDNRaqAB71BR2hPlhcQbPbrXh8uGJUjLVc+NpRiPsQbv6B8UvIucN4IX9YGVJkw3UxVQBn2vPSwxACAck32Q==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      react-router: 7.9.4
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@react-router/serve@7.4.0':
     resolution: {integrity: sha512-SvtEDZEkXvfZ40uuUvgwqc/0ZjBvPvHu9o7XS+1hTAFoklYreSw4lCadzs9qRlomDC7Aj/byXseiR9eXi+7Abw==}
     engines: {node: '>=20.0.0'}
@@ -3663,6 +3673,9 @@ packages:
 
   caniuse-lite@1.0.30001707:
     resolution: {integrity: sha512-3qtRjw/HQSMlDWf+X79N206fepf4SOOU6SQLMaq/0KkZLmSjPxAkBOQQ+FxbHKfHmYLZFfdWsO3KA90ceHPSnw==}
+
+  caniuse-lite@1.0.30001763:
+    resolution: {integrity: sha512-mh/dGtq56uN98LlNX9qdbKnzINhX0QzhiWBFEkFfsFO4QyCvL8YegrJAazCwXIeqkIob8BlZPGM3xdnY+sgmvQ==}
 
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
@@ -5324,6 +5337,7 @@ packages:
   keygrip@1.1.0:
     resolution: {integrity: sha512-iYSchDJ+liQ8iwbSI2QqsQOvqv58eJCEanyJPJi+Khyu8smkcKSFUCbPwzFcL7YVtZ6eONjqRX/38caJ7QjRAQ==}
     engines: {node: '>= 0.6'}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
@@ -7336,6 +7350,7 @@ packages:
   whatwg-encoding@2.0.0:
     resolution: {integrity: sha512-p41ogyeMUrw3jWclHWTQg1k05DSVXPLcVxRTYsXUk+ZooOCZLcoYgPZ/HL/D/N+uQPOtcp1me1WhBEaX02mhWg==}
     engines: {node: '>=12'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@3.0.0:
     resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
@@ -9936,6 +9951,13 @@ snapshots:
     optionalDependencies:
       typescript: 5.7.3
 
+  '@react-router/node@7.9.4(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)':
+    dependencies:
+      '@mjackson/node-fetch-server': 0.2.0
+      react-router: 7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+    optionalDependencies:
+      typescript: 5.7.3
+
   '@react-router/serve@7.4.0(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)':
     dependencies:
       '@react-router/express': 7.4.0(express@4.21.2)(react-router@7.4.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(typescript@5.7.3)
@@ -10062,7 +10084,7 @@ snapshots:
       '@module-federation/runtime-tools': 0.8.4
       '@rspack/binding': 1.2.8
       '@rspack/lite-tapable': 1.0.1
-      caniuse-lite: 1.0.30001707
+      caniuse-lite: 1.0.30001763
     optionalDependencies:
       '@swc/helpers': 0.5.15
 
@@ -11409,6 +11431,8 @@ snapshots:
   camelcase@6.3.0: {}
 
   caniuse-lite@1.0.30001707: {}
+
+  caniuse-lite@1.0.30001763: {}
 
   caseless@0.12.0: {}
 
