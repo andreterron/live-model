@@ -1,13 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
-function getLocalStorageKeys() {
-  return Array.from({ length: localStorage.length }, (_, index) =>
-    localStorage.key(index)
-  )
-    .filter((key): key is string => key !== null)
-    .sort((a, b) => a.localeCompare(b));
-}
+import { useLocalStorageKeys } from '../hooks/use-local-storage-keys';
 
 export default function ExploreIndexPage() {
   // TODO: Where do we start from?
@@ -16,20 +9,7 @@ export default function ExploreIndexPage() {
   // TODO: How do we use Live Model in this environment with no schemas/types??
 
   // TODO: This feels like it should be in LiveModel. Maybe as a Live<string[]> itself.
-  const [keys, setKeys] = useState<string[]>([]);
-
-  useEffect(() => {
-    const refreshKeys = () => setKeys(getLocalStorageKeys());
-
-    refreshKeys();
-    window.addEventListener('storage', refreshKeys);
-    window.addEventListener('local-storage', refreshKeys);
-
-    return () => {
-      window.removeEventListener('storage', refreshKeys);
-      window.removeEventListener('local-storage', refreshKeys);
-    };
-  }, []);
+  const keys = useLocalStorageKeys();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6">
