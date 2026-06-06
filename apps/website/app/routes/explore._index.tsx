@@ -105,8 +105,10 @@ export default function ExploreIndexPage() {
           onBlur={() => setCommandInputFocused(false)}
           wrapperClassName={
             showCmdkOptionsAsOldList
-              ? 'rounded-md border bg-popover shadow-xs'
-              : undefined
+              ? 'rounded-md border border-b-0 bg-popover shadow-xs'
+              : showCommandOptions
+                ? undefined
+                : 'border-b-0'
           }
         />
         {showCommandOptions ? (
