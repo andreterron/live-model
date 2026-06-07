@@ -1,8 +1,7 @@
 import { generateId } from 'live-model';
-import { useControls } from 'leva';
-import { Fragment, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { Button } from '../components/ui/button';
 import {
@@ -16,14 +15,6 @@ import {
 import { useLocalStorageKeys } from '../hooks/use-local-storage-keys';
 
 const createNewEntityLabel = 'Create new Entity';
-const oldListCommandItemClass = (commandInputFocused: boolean) =>
-  [
-    'rounded-none px-4 py-3 first:rounded-t-md last:rounded-b-md',
-    'hover:!bg-accent hover:!text-accent-foreground',
-    commandInputFocused
-      ? 'data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground'
-      : 'data-[selected=true]:bg-transparent data-[selected=true]:text-foreground',
-  ].join(' ');
 
 export default function ExploreIndexPage() {
   // TODO: Where do we start from?
@@ -35,23 +26,11 @@ export default function ExploreIndexPage() {
   const keys = useLocalStorageKeys();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [commandInputFocused, setCommandInputFocused] = useState(false);
-  const {
-    removeOldIdList,
-    onlyShowCmdkOptionsAfterTyping,
-    showCmdkOptionsAsOldList,
-  } = useControls('Explore UI', {
-    removeOldIdList: false,
-    onlyShowCmdkOptionsAfterTyping: false,
-    showCmdkOptionsAsOldList: false,
-  });
   const trimmedSearch = search.trim();
-  const hideOldIdList = removeOldIdList || showCmdkOptionsAsOldList;
-  const showCommandOptions =
-    !onlyShowCmdkOptionsAfterTyping || trimmedSearch.length > 0;
   const normalizedSearch = trimmedSearch.toLocaleLowerCase();
+  const showCommandOptions = trimmedSearch.length > 0;
   const showCreateNewEntityAction =
-    trimmedSearch.length > 0 &&
+    showCommandOptions &&
     createNewEntityLabel.toLocaleLowerCase().includes(normalizedSearch);
   const filteredKeys = useMemo(() => {
     if (!normalizedSearch) {
@@ -63,7 +42,7 @@ export default function ExploreIndexPage() {
     );
   }, [keys, normalizedSearch]);
   const showSearchCreate =
-    trimmedSearch.length > 0 && !keys.includes(trimmedSearch);
+    showCommandOptions && !keys.includes(trimmedSearch);
 
   const openEntity = (id: string) => {
     navigate(`entry/${encodeURIComponent(id)}`);
@@ -89,136 +68,52 @@ export default function ExploreIndexPage() {
         Create
       </Button>
 
-      <Command
-        shouldFilter={false}
-        className={
-          showCmdkOptionsAsOldList
-            ? 'gap-3 overflow-visible rounded-none bg-transparent'
-            : 'rounded-md border shadow-xs'
-        }
-      >
+      <Command shouldFilter={false} className="rounded-md border shadow-xs">
         <CommandInput
           placeholder="Search IDs or create an entity..."
           value={search}
           onValueChange={setSearch}
-          onFocus={() => setCommandInputFocused(true)}
-          onBlur={() => setCommandInputFocused(false)}
-          wrapperClassName={
-            showCmdkOptionsAsOldList
-              ? 'rounded-md border border-b-0 bg-popover shadow-xs'
-              : showCommandOptions
-                ? undefined
-                : 'border-b-0'
-          }
+          wrapperClassName={showCommandOptions ? undefined : 'border-b-0'}
         />
         {showCommandOptions ? (
-          <CommandList
-            className={
-              showCmdkOptionsAsOldList
-                ? 'max-h-none overflow-visible rounded-md border bg-popover shadow-xs'
-                : undefined
-            }
-          >
-            {showCmdkOptionsAsOldList ? (
+          <CommandList>
+            {showCreateNewEntityAction ? (
               <>
-                {showCreateNewEntityAction ? (
+                <CommandGroup heading="Actions">
                   <CommandItem
                     value="create-new-entity"
-                    className={oldListCommandItemClass(commandInputFocused)}
                     onSelect={() => createEntity(generateId())}
                   >
                     {createNewEntityLabel}
                   </CommandItem>
-                ) : null}
-                {showCreateNewEntityAction &&
-                (filteredKeys.length > 0 || showSearchCreate) ? (
-                  <CommandSeparator className="mx-0" />
-                ) : null}
-                {filteredKeys.map((key, index) => (
-                  <Fragment key={key}>
-                    {index > 0 ? <CommandSeparator className="mx-0" /> : null}
-                    <CommandItem
-                      value={`id:${key}`}
-                      className={oldListCommandItemClass(commandInputFocused)}
-                      onSelect={() => openEntity(key)}
-                    >
-                      <span className="truncate font-mono">{key}</span>
-                    </CommandItem>
-                  </Fragment>
-                ))}
-                {showSearchCreate ? (
-                  <>
-                    {showCreateNewEntityAction || filteredKeys.length > 0 ? (
-                      <CommandSeparator className="mx-0" />
-                    ) : null}
-                    <CommandItem
-                      value={`create:${trimmedSearch}`}
-                      className={oldListCommandItemClass(commandInputFocused)}
-                      onSelect={() => createEntity(trimmedSearch)}
-                    >
-                      create {trimmedSearch}
-                    </CommandItem>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <>
-                {showCreateNewEntityAction ? (
-                  <>
-                    <CommandGroup heading="Actions">
-                      <CommandItem
-                        value="create-new-entity"
-                        onSelect={() => createEntity(generateId())}
-                      >
-                        {createNewEntityLabel}
-                      </CommandItem>
-                    </CommandGroup>
-
-                    <CommandSeparator />
-                  </>
-                ) : null}
-
-                <CommandGroup heading="IDs">
-                  {filteredKeys.map((key) => (
-                    <CommandItem
-                      key={key}
-                      value={`id:${key}`}
-                      onSelect={() => openEntity(key)}
-                    >
-                      <span className="truncate font-mono">{key}</span>
-                    </CommandItem>
-                  ))}
-                  {showSearchCreate ? (
-                    <CommandItem
-                      value={`create:${trimmedSearch}`}
-                      onSelect={() => createEntity(trimmedSearch)}
-                    >
-                      create "{trimmedSearch}"
-                    </CommandItem>
-                  ) : null}
                 </CommandGroup>
+
+                <CommandSeparator />
               </>
-            )}
+            ) : null}
+
+            <CommandGroup heading="IDs">
+              {filteredKeys.map((key) => (
+                <CommandItem
+                  key={key}
+                  value={`id:${key}`}
+                  onSelect={() => openEntity(key)}
+                >
+                  <span className="truncate font-mono">{key}</span>
+                </CommandItem>
+              ))}
+              {showSearchCreate ? (
+                <CommandItem
+                  value={`create:${trimmedSearch}`}
+                  onSelect={() => createEntity(trimmedSearch)}
+                >
+                  create {trimmedSearch}
+                </CommandItem>
+              ) : null}
+            </CommandGroup>
           </CommandList>
         ) : null}
       </Command>
-
-      {hideOldIdList ? null : keys.length === 0 ? (
-        <p className="text-muted-foreground">No localStorage keys found.</p>
-      ) : (
-        <ul className="divide-y rounded-md border">
-          {keys.map((key) => (
-            <li key={key}>
-              <Link
-                className="block truncate px-4 py-3 font-mono text-sm hover:bg-accent hover:text-accent-foreground"
-                to={`entry/${encodeURIComponent(key)}`}
-              >
-                {key}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
     </main>
   );
 }
