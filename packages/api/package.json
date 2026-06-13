@@ -1,0 +1,28 @@
+{
+  "name": "@live-model/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "vite build",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --build tsconfig.lib.json"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "crossws": "^0.4.6",
+    "srvx": "^0.11.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.2",
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "~5.0.2"
+  }
+}

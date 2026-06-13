@@ -11,6 +11,9 @@
     },
     {
       "path": "./packages/live-model"
+    },
+    {
+      "path": "./packages/api"
     }
   ]
 }
