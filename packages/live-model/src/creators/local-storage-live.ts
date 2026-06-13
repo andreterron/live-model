@@ -24,7 +24,6 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   // We store `lastSerializedValue: string | null` to compare with the existing
   // value in localStorage, which tells us if the value changed or not.
   protected lastSerializedValue: string | null = null;
-  protected value: T | undefined;
   protected state: LiveState<T> = {
     kind: 'loading',
     since: new Date(),
@@ -48,7 +47,6 @@ export class LocalStorageLive<T> extends BaseLive<T> {
 
       this.lastSerializedValue = serialized;
       if (!serialized) {
-        this.value = undefined;
         this.state = { kind: 'absent', reason: 'not_found' };
         return { state: this.state, changed: true };
       }
@@ -56,14 +54,15 @@ export class LocalStorageLive<T> extends BaseLive<T> {
       try {
         const deserialized = JSON.parse(serialized);
         if (!this.options.validator) {
-          this.value = deserialized as T;
-          this.state = { kind: 'value', value: this.value };
+          this.state = { kind: 'value', value: deserialized };
           return { state: this.state, changed: true };
         }
 
         // Validator
-        this.value = this.options.validator.parse(deserialized);
-        this.state = { kind: 'value', value: this.value };
+        this.state = {
+          kind: 'value',
+          value: this.options.validator.parse(deserialized),
+        };
         return {
           state: this.state,
           changed: true,
@@ -86,7 +85,6 @@ export class LocalStorageLive<T> extends BaseLive<T> {
             e2
           );
         }
-        this.value = undefined;
         this.state = { kind: 'absent', reason: 'error', error: e };
         return { state: this.state, changed: true };
       }
@@ -148,7 +146,6 @@ export class LocalStorageLive<T> extends BaseLive<T> {
 
   setValue(v: T) {
     try {
-      this.value = v;
       this.state = { kind: 'value', value: v };
       // Save to localStorage before notifying subscribers. Other tabs might
       // get the update before the value propagates internally, but that's
@@ -172,7 +169,6 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   // NOTE: Copy-pasted from the setValue function above. Keep them in sync
   deleteValue() {
     try {
-      this.value = undefined;
       this.state = { kind: 'absent', reason: 'deleted' };
       // Delete from localStorage before notifying subscribers. Other tabs might
       // get the update before the value propagates internally, but that's
