@@ -1,6 +1,6 @@
 import { LiveDeleter } from '../deleter.js';
 import { BaseLive, Live } from '../live.js';
-import { LiveState } from 'src/value-state.js';
+import { LiveState } from '../value-state.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';
 import { LiveSetter } from '../setter.js';
