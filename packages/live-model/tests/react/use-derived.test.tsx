@@ -3,12 +3,12 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import { HookReturn, useDerived, useLiveState } from '../../src/index.js';
+import { LiveHookReturn, useDerived, useLiveState } from '../../src/index.js';
 import { clearData, mockData } from '../test-utils/mock-data.js';
 import { RefObject } from 'react';
 
 describe('react useDerived', () => {
-  let liveState: RefObject<HookReturn<number | undefined>>;
+  let liveState: RefObject<LiveHookReturn<number>>;
 
   beforeEach(() => {
     mockData({ one: 1 });
@@ -27,6 +27,7 @@ describe('react useDerived', () => {
       )
     );
     expect(result.current.value).toBe(2);
+    expectTypeOf(result.current.value).toEqualTypeOf<number | undefined>();
   });
 
   test('can define a setter', () => {

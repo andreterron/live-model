@@ -23,3 +23,4 @@ export * from './react/use-subscribe.js';
 // Root
 export * from './live.js';
 export * from './setter.js';
+export * from './deleter.js';

@@ -4,7 +4,7 @@
 
 import { renderHook } from '@testing-library/react';
 import {
-  HookReturn,
+  LiveHookWithDefaultReturn,
   SettableMemoryLive,
   useLiveState,
   useSubscribe,
@@ -13,7 +13,7 @@ import { clearData, mockData } from '../test-utils/mock-data.js';
 import { RefObject } from 'react';
 
 describe('react useSubscribe', () => {
-  let liveState: RefObject<HookReturn<number>>;
+  let liveState: RefObject<LiveHookWithDefaultReturn<number>>;
 
   beforeEach(() => {
     mockData({ one: 1 });
@@ -28,6 +28,7 @@ describe('react useSubscribe', () => {
   test('can subscribe to a live', async () => {
     let { result } = renderHook(() => useSubscribe(liveState.current.live));
     expect(result.current.value).toBe(1);
+    expectTypeOf(result.current.value).toEqualTypeOf<number | undefined>();
   });
 
   test.todo('can get updates from a live');

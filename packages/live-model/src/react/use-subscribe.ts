@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { Live } from '../live.js';
+import { HACKY_getCurrentLiveValue, Live } from '../live.js';
 import { SubscribeHookReturn } from './hook-types.js';
 
 export interface UseSubscribeOptions<T> {
@@ -18,7 +18,7 @@ export function useSubscribe<T>(
   live: Live<T>,
   options?: UseSubscribeOptions<T>
 ): SubscribeHookReturn<T> {
-  const [subscribe, getSnapshot, setValue] = useMemo(
+  const [subscribe, getSnapshot, setValue, deleteValue] = useMemo(
     () => [
       (onStoreChange: () => void) => {
         const sub = live.subscribe({
@@ -30,9 +30,12 @@ export function useSubscribe<T>(
           sub.unsubscribe();
         };
       },
-      () => live.get(),
+      () => HACKY_getCurrentLiveValue(live, 'useSubscribe.getSnapshot'),
       (v: T) => {
         live.setValue(v);
+      },
+      () => {
+        live.deleteValue();
       },
     ],
     [options?.equalityKey ? options.equalityKey(live) : live]
@@ -43,5 +46,6 @@ export function useSubscribe<T>(
   return {
     value,
     setValue,
+    deleteValue,
   };
 }

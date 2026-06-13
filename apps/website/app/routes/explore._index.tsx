@@ -13,8 +13,13 @@ import {
   CommandSeparator,
 } from '../components/ui/command';
 import { useLocalStorageKeys } from '../hooks/use-local-storage-keys';
+import type { Route } from './+types/explore._index';
 
 const createNewEntityLabel = 'Create new Entity';
+
+export function clientLoader({}: Route.ClientLoaderArgs) {
+  return {};
+}
 
 export default function ExploreIndexPage() {
   // TODO: Where do we start from?
@@ -41,8 +46,7 @@ export default function ExploreIndexPage() {
       key.toLocaleLowerCase().includes(normalizedSearch)
     );
   }, [keys, normalizedSearch]);
-  const showSearchCreate =
-    showCommandOptions && !keys.includes(trimmedSearch);
+  const showSearchCreate = showCommandOptions && !keys.includes(trimmedSearch);
 
   const openEntity = (id: string) => {
     navigate(`entry/${encodeURIComponent(id)}`);
