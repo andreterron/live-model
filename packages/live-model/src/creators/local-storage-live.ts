@@ -24,10 +24,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   // We store `lastSerializedValue: string | null` to compare with the existing
   // value in localStorage, which tells us if the value changed or not.
   protected lastSerializedValue: string | null = null;
-  protected state: LiveState<T> = {
-    kind: 'loading',
-    since: new Date(),
-  };
+  protected state: LiveState<T> = LiveState.loading;
   constructor(
     protected key: string,
     protected options: LocalStorageLiveOptions<T> = {}

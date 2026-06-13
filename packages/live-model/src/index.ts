@@ -21,6 +21,7 @@ export * from './react/use-model.js';
 export * from './react/use-subscribe.js';
 
 // Root
+export * from './value-state.js';
 export * from './live.js';
 export * from './setter.js';
 export * from './deleter.js';
