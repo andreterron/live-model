@@ -225,7 +225,7 @@ importers:
         version: 1.1.6(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.0.0(react@19.0.0))(react-router@7.17.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
       tailwindcss:
         specifier: ^4.0.0
-        version: 4.0.17
+        version: 4.3.1
       tw-animate-css:
         specifier: ^1.2.8
         version: 1.2.8
@@ -243,6 +243,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@live-model/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       crossws:
         specifier: ^0.4.6
         version: 0.4.6(srvx@0.11.16)
@@ -268,6 +271,9 @@ importers:
 
   packages/live-model:
     dependencies:
+      '@live-model/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.0.0
@@ -287,6 +293,22 @@ importers:
       vitest:
         specifier: ^4.1.8
         version: 4.1.8(@types/node@25.9.3)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@22.1.0)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
+
+  packages/protocol:
+    dependencies:
+      zod:
+        specifier: ^3.24.3
+        version: 3.24.3
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0)
+      vite-plugin-dts:
+        specifier: ~5.0.2
+        version: 5.0.2(@microsoft/api-extractor@7.52.2(@types/node@25.9.3))(@rspack/core@1.6.8(@swc/helpers@0.5.23))(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.62.0)(typescript@5.7.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))(webpack@5.107.2(@swc/core@1.15.41(@swc/helpers@0.5.23))(esbuild@0.28.1)(postcss@8.4.38))
 
 packages:
 
@@ -3736,6 +3758,7 @@ packages:
   '@verdaccio/commons-api@10.2.0':
     resolution: {integrity: sha512-F/YZANu4DmpcEV0jronzI7v2fGVWkQ5Mwi+bVmV+ACJ+EzR0c9Jbhtbe5QyLUuzR97t8R5E/Xe53O0cc2LukdQ==}
     engines: {node: '>=8'}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   '@verdaccio/config@8.0.0-next-8.13':
     resolution: {integrity: sha512-/vH79u0AEQyvTlpBUqxW8bPSL19Samv8I3Vq5ZL07QsW2uSt6faOSDAY2ag/a1zsyuvD55u/QvrSNW6El9Xr5w==}
@@ -7690,9 +7713,6 @@ packages:
   tailwind-merge@3.2.0:
     resolution: {integrity: sha512-FQT/OVqCD+7edmmJpsgCsY820RTD5AkBryuG5IUqR5YQZSdj5xlH5nLgH7YPths7WsLPSpSBNneJdM8aS8aeFA==}
 
-  tailwindcss@4.0.17:
-    resolution: {integrity: sha512-OErSiGzRa6rLiOvaipsDZvLMSpsBZ4ysB4f0VKGXUrjw2jfkJRd6kjRKV2+ZmTCNvwtvgdDam5D7w6WXsdLJZw==}
-
   tailwindcss@4.3.1:
     resolution: {integrity: sha512-hk+TB1m+K8CYNrP6rjQaq/Y+4Zylwpa87mLYBKCunwnnQ9p+fHb7kmSfGqyEJoxF/O6CDyABWVFEafNSYKll+Q==}
 
@@ -8095,6 +8115,7 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8n@1.5.1:
@@ -8328,6 +8349,7 @@ packages:
   whatwg-encoding@2.0.0:
     resolution: {integrity: sha512-p41ogyeMUrw3jWclHWTQg1k05DSVXPLcVxRTYsXUk+ZooOCZLcoYgPZ/HL/D/N+uQPOtcp1me1WhBEaX02mhWg==}
     engines: {node: '>=12'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@3.0.0:
     resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
@@ -16832,8 +16854,6 @@ snapshots:
   system-architecture@1.0.0: {}
 
   tailwind-merge@3.2.0: {}
-
-  tailwindcss@4.0.17: {}
 
   tailwindcss@4.3.1: {}
 

@@ -22,5 +22,10 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true
-  }
+  },
+  "references": [
+    {
+      "path": "../../packages/live-model"
+    }
+  ]
 }
