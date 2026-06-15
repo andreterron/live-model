@@ -10,7 +10,7 @@ class MappedLive<T, Input> extends BaseLive<T> {
 
   constructor(
     private live: Live<Input>,
-    protected transform: (v: Input) => T,
+    protected transform: (state: LiveState<Input>) => LiveState<T>,
     protected setter?: LiveSetter<Input, T>,
     protected deleter?: LiveDeleter<Input>
   ) {
@@ -18,11 +18,7 @@ class MappedLive<T, Input> extends BaseLive<T> {
   }
 
   override get(): LiveState<T> {
-    const srcState = this.live.get();
-    if (srcState.kind !== 'value') {
-      return srcState;
-    }
-    return { kind: 'value', value: this.transform(srcState.value) };
+    return this.transform(this.live.get());
   }
 
   override subscribe(subscriber: Subscriber<LiveState<T>>): Subscription {
@@ -31,15 +27,7 @@ class MappedLive<T, Input> extends BaseLive<T> {
     if (!this.inputSubscription) {
       this.inputSubscription = this.live.subscribe({
         next: (v) => {
-          if (v.kind === 'value') {
-            this.notifyLiveState({
-              kind: 'value',
-              value: this.transform(v.value),
-              error: v.error,
-            });
-          } else {
-            this.notifyLiveState(v);
-          }
+          this.notifyLiveState(this.transform(v));
         },
       });
     } else {
@@ -77,11 +65,31 @@ class MappedLive<T, Input> extends BaseLive<T> {
   }
 }
 
-export function map<T, U>(
+export function valueTransform<T, U>(
+  transform: (v: T) => U
+): (state: LiveState<T>) => LiveState<U> {
+  return (state) => {
+    if (state.kind !== 'value') {
+      return state;
+    }
+    return { ...state, value: transform(state.value) };
+  };
+}
+
+export function mapState<T, U>(
+  live: Live<T>,
+  transform: (state: LiveState<T>) => LiveState<U>,
+  setter?: LiveSetter<T, U>,
+  deleter?: LiveDeleter<T>
+): Live<U> {
+  return new MappedLive(live, transform, setter, deleter);
+}
+
+export function mapValue<T, U>(
   live: Live<T>,
   transform: (v: T) => U,
   setter?: LiveSetter<T, U>,
   deleter?: LiveDeleter<T>
 ): Live<U> {
-  return new MappedLive(live, transform, setter, deleter);
+  return mapState(live, valueTransform(transform), setter, deleter);
 }

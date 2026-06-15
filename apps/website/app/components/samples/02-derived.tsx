@@ -1,13 +1,32 @@
-import { setter, useDerived, useLiveState } from 'live-model';
+import {
+  LiveState,
+  setter,
+  useDerived,
+  useDerivedValue,
+  useLiveState,
+} from 'live-model';
 import { BooleanControl } from './controls';
 import { Card } from '../ui/card';
 import { CardRow } from '../card-row';
 
 export function DerivedSample() {
   const { value, setValue, live } = useLiveState('02-derived-stateful', false);
+  // TODO: `false` should be the default value of the `live` above, instead of hand-handling on the useDerived below.
   const { value: notA, setValue: setNotA } = useDerived(
     live,
-    (v) => !v,
+    (state) => {
+      if (state.kind === 'value') {
+        return LiveState.value(!state.value);
+      } else if (
+        state.kind === 'absent' &&
+        (state.reason === 'not_found' || state.reason === 'deleted')
+      ) {
+        // Considers the value as `false` by default
+        return LiveState.value(!false);
+      }
+      console.log('Unexpected state:', state);
+      return state;
+    },
     setter.transform((v) => !v)
   );
 
@@ -23,7 +42,7 @@ export function DerivedSample() {
           </>
         }
       >
-        <BooleanControl value={notA} onChange={(v) => setNotA(v)} />
+        <BooleanControl value={notA ?? false} onChange={(v) => setNotA(v)} />
       </CardRow>
     </Card>
   );

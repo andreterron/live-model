@@ -2,7 +2,7 @@ import { LocalStorageLive } from '../creators/local-storage-live.js';
 import { WebSocketLive } from '../creators/web-socket/web-socket-live.js';
 import { LiveDeleter } from '../deleter.js';
 import { HACKY_getCurrentLiveValue, Live } from '../live.js';
-import { map } from '../operators/map.js';
+import { mapValue } from '../operators/map.js';
 import { LiveSetter } from '../setter.js';
 import { generateId } from './generate-id.js';
 
@@ -57,7 +57,7 @@ export class Model<T extends LiveModelType = AnyLiveModelType> {
     setter?: LiveSetter<T[], T | undefined>,
     deleter?: LiveDeleter<T[]>
   ): Live<T | undefined> {
-    return map(
+    return mapValue(
       this.liveList,
       (list) => list.find((v) => predicate(v)),
       setter ??

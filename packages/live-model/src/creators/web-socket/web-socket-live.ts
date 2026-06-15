@@ -21,7 +21,8 @@ export interface WebSocketLiveOptions<T> {
 export class WebSocketLive<T> extends BaseLive<T> {
   static defaultTransport = new WebSocketTransport('ws://127.0.0.1:3001');
 
-  protected state: LiveState<T> = LiveState.loading;
+  // TODO: Initial state should probably be .loading, as long as it's actually loading from somewhere.
+  protected state: LiveState<T> = LiveState.absent('not_found');
   protected transport: WebSocketTransport;
   protected transportConnection?: WebSocketTransportConnection;
 
