@@ -17,8 +17,7 @@ export class Model<T extends LiveModelType = AnyLiveModelType> {
   protected liveList: Live<T[]>;
 
   constructor(readonly key: string) {
-    // this.liveList = new WebSocketLive<T[]>(key);
-    this.liveList = new LocalStorageLive<T[]>(key);
+    this.liveList = new WebSocketLive<T[]>(key);
   }
 
   selectAll(): Live<T[]> {

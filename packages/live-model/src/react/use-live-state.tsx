@@ -28,14 +28,8 @@ export function useLiveState<T = unknown>(
   defaultValue?: T,
   options?: UseLiveStateOptions
 ): LiveHookReturn<T> {
-  const live = useMemo(
-    () =>
-      // new WebSocketLive<T>(key),
-      new LocalStorageLive<T>(key, {
-        initializeWithValue: options?.initializeWithValue,
-      }),
-    [key]
-  );
+  // TODO: Use options.initializeWithValue?
+  const live = useMemo(() => new WebSocketLive<T>(key), [key]);
 
   const { value, setValue, deleteValue } = useSubscribe(live);
 

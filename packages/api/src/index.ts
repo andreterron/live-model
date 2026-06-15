@@ -1,22 +1,101 @@
-// import { Message, protocolMessageSchema } from '@live-model/protocol';
+import {
+  type Message,
+  type SnapshotMessage,
+  protocolMessageSchema,
+} from '@live-model/protocol';
 import type { Peer } from 'crossws';
 import { serve } from 'crossws/server';
+import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { serveStatic } from 'srvx/static';
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 const hostname = process.env.HOST ?? '127.0.0.1';
+const databasePath = process.env.LIVE_MODEL_DB_PATH ?? 'live-model.sqlite';
 const peers = new Set<Peer>();
 
-// function parseProtocolMessage(text: string): Message | undefined {
-//   const parsed: unknown = JSON.parse(text);
-//   const result = protocolMessageSchema.safeParse(parsed);
+interface EntityStore {
+  selectEntities: StatementSync;
+  upsertEntity: StatementSync;
+  deleteEntity: StatementSync;
+}
 
-//   if (!result.success) {
-//     return undefined;
-//   }
+let entityStore: EntityStore | undefined;
 
-//   return result.data;
-// }
+function getEntityStore(): EntityStore {
+  if (entityStore) {
+    return entityStore;
+  }
+
+  const database = new DatabaseSync(databasePath);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS entities (
+      key TEXT PRIMARY KEY,
+      data TEXT NOT NULL
+    )
+  `);
+
+  entityStore = {
+    selectEntities: database.prepare(
+      'SELECT key, data FROM entities ORDER BY key'
+    ),
+    upsertEntity: database.prepare(`
+      INSERT INTO entities (key, data)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET data = excluded.data
+    `),
+    deleteEntity: database.prepare('DELETE FROM entities WHERE key = ?'),
+  };
+
+  return entityStore;
+}
+
+function parseProtocolMessage(text: string): Message | undefined {
+  const parsed: unknown = JSON.parse(text);
+  const result = protocolMessageSchema.safeParse(parsed);
+
+  if (!result.success) {
+    return undefined;
+  }
+
+  return result.data;
+}
+
+function persistMessage(message: Message): boolean {
+  if (message.type === 'delete') {
+    getEntityStore().deleteEntity.run(message.key);
+    return true;
+  }
+
+  if (!('data' in message)) {
+    return false;
+  }
+
+  const data = JSON.stringify(message.data);
+
+  if (data === undefined) {
+    return false;
+  }
+
+  getEntityStore().upsertEntity.run(message.key, data);
+  return true;
+}
+
+function sendSnapshotMessages(peer: Peer) {
+  for (const row of getEntityStore().selectEntities.iterate()) {
+    const message: SnapshotMessage = {
+      type: 'snapshot',
+      key: row.key as string,
+      data: JSON.parse(row.data as string),
+    };
+
+    peer.send(JSON.stringify(message));
+  }
+}
+
+function sendError(peer: Peer, error: string) {
+  peer.send(JSON.stringify({ error }));
+}
 
 function broadcastToOtherPeers(sender: Peer, messageText: string) {
   for (const peer of peers) {
@@ -35,6 +114,7 @@ const server = serve({
   port,
   websocket: {
     open(peer) {
+      sendSnapshotMessages(peer);
       peers.add(peer);
       console.log('[ws] open', peer.toString());
     },
@@ -43,22 +123,25 @@ const server = serve({
       const messageText = message.text();
       console.log('[ws] message', messageText);
 
-      // TODO: Validate message (code commented out below)
+      let protocolMessage: Message | undefined;
 
-      // let protocolMessage: Message | undefined;
+      try {
+        protocolMessage = parseProtocolMessage(messageText);
+      } catch (error) {
+        console.error('[ws] invalid JSON message', error);
+        sendError(peer, 'Invalid JSON message');
+        return;
+      }
 
-      // try {
-      //   protocolMessage = parseProtocolMessage(messageText);
-      // } catch (error) {
-      //   console.error('[ws] invalid JSON message', error);
-      //   peer.send({ error: 'Invalid JSON message' });
-      //   return;
-      // }
+      if (!protocolMessage) {
+        sendError(peer, 'Invalid protocol message');
+        return;
+      }
 
-      // if (!protocolMessage) {
-      //   peer.send({ error: 'Invalid protocol message' });
-      //   return;
-      // }
+      if (!persistMessage(protocolMessage)) {
+        sendError(peer, 'Protocol message must include data');
+        return;
+      }
 
       broadcastToOtherPeers(peer, messageText);
     },
