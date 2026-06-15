@@ -27,7 +27,7 @@ export function useModel<T extends LiveModelType = AnyLiveModelType>(
 
   return {
     ...result,
-    items,
+    items: items ?? [],
     setItems,
   };
 }

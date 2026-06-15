@@ -1,4 +1,5 @@
 import { LocalStorageLive } from '../creators/local-storage-live.js';
+import { WebSocketLive } from '../creators/web-socket/web-socket-live.js';
 import { LiveDeleter } from '../deleter.js';
 import { HACKY_getCurrentLiveValue, Live } from '../live.js';
 import { map } from '../operators/map.js';
@@ -16,6 +17,7 @@ export class Model<T extends LiveModelType = AnyLiveModelType> {
   protected liveList: Live<T[]>;
 
   constructor(readonly key: string) {
+    // this.liveList = new WebSocketLive<T[]>(key);
     this.liveList = new LocalStorageLive<T[]>(key);
   }
 

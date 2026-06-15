@@ -2,6 +2,7 @@ import { LiveHookReturn, LiveHookWithDefaultReturn } from './hook-types.js';
 import { useMemo } from 'react';
 import { LocalStorageLive } from '../creators/local-storage-live.js';
 import { useSubscribe } from './use-subscribe.js';
+import { WebSocketLive } from '../creators/web-socket/web-socket-live.js';
 
 export interface UseLiveStateOptions {
   initializeWithValue?: boolean;
@@ -29,6 +30,7 @@ export function useLiveState<T = unknown>(
 ): LiveHookReturn<T> {
   const live = useMemo(
     () =>
+      // new WebSocketLive<T>(key),
       new LocalStorageLive<T>(key, {
         initializeWithValue: options?.initializeWithValue,
       }),

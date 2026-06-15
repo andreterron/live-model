@@ -189,6 +189,9 @@ importers:
       leva:
         specifier: ^0.10.1
         version: 0.10.1(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      live-model:
+        specifier: workspace:*
+        version: link:../../packages/live-model
       lucide-react:
         specifier: ^0.487.0
         version: 0.487.0(react@19.0.0)

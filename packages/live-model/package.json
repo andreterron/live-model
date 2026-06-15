@@ -25,6 +25,9 @@
     "release": "rm -rf dist && pnpm build && pnpm publish --no-git-checks",
     "prepack": "cp ../../README.md ."
   },
+  "dependencies": {
+    "@live-model/protocol": "workspace:*"
+  },
   "devDependencies": {
     "@testing-library/react": "16.1.0",
     "@vitest/spy": "^4.1.8",

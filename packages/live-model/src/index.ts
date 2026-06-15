@@ -1,6 +1,8 @@
 // Creators
 export * from './creators/settable-memory.js';
 export * from './creators/local-storage-live.js';
+export * from './creators/web-socket/web-socket-transport.js';
+export * from './creators/web-socket/web-socket-live.js';
 
 // Operators
 export * from './operators/map.js';
