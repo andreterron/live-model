@@ -28,7 +28,9 @@ type WebSocketTransportConnectionInternal = WebSocketTransportConnection & {
 };
 
 export class WebSocketTransport {
+  protected static readonly closeDelayMs = 5_000;
   protected socket?: WebSocket;
+  protected closeSocketTimeout?: ReturnType<typeof setTimeout>;
   protected pendingMessages: string[] = [];
   protected subscribersByKey = new Map<
     string,
@@ -44,6 +46,8 @@ export class WebSocketTransport {
     key: string,
     subscriber: WebSocketTransportSubscriber
   ): WebSocketTransportConnection {
+    this.cancelCloseSocketTimeout();
+
     let connections = this.subscribersByKey.get(key);
 
     if (!connections) {
@@ -66,7 +70,7 @@ export class WebSocketTransport {
         }
 
         if (this.subscribersByKey.size === 0) {
-          this.closeSocket();
+          this.scheduleCloseSocket();
         }
       },
     };
@@ -79,10 +83,11 @@ export class WebSocketTransport {
 
   protected send(message: SnapshotMessage | DeleteMessage): void {
     const serialized = JSON.stringify(message);
+    const WebSocketCtor = this.getWebSocketConstructor();
 
     this.connect();
 
-    if (this.socket?.readyState !== WebSocket.OPEN) {
+    if (this.socket?.readyState !== WebSocketCtor.OPEN) {
       this.pendingMessages.push(serialized);
       return;
     }
@@ -91,15 +96,16 @@ export class WebSocketTransport {
   }
 
   protected connect() {
+    const WebSocketCtor = this.getWebSocketConstructor();
+
     if (
       this.socket &&
-      (this.socket.readyState === WebSocket.CONNECTING ||
-        this.socket.readyState === WebSocket.OPEN)
+      (this.socket.readyState === WebSocketCtor.CONNECTING ||
+        this.socket.readyState === WebSocketCtor.OPEN)
     ) {
       return;
     }
 
-    const WebSocketCtor = this.options.WebSocket ?? WebSocket;
     const socket = new WebSocketCtor(this.url, this.options.protocols);
     this.socket = socket;
 
@@ -109,17 +115,45 @@ export class WebSocketTransport {
     socket.addEventListener('error', this.handleError);
   }
 
+  protected getWebSocketConstructor(): typeof WebSocket {
+    return this.options.WebSocket ?? WebSocket;
+  }
+
   protected closeSocket() {
     if (!this.socket) {
       return;
     }
 
+    this.cancelCloseSocketTimeout();
     this.socket.removeEventListener('open', this.handleOpen);
     this.socket.removeEventListener('message', this.handleMessage);
     this.socket.removeEventListener('close', this.handleClose);
     this.socket.removeEventListener('error', this.handleError);
     this.socket.close();
     this.socket = undefined;
+  }
+
+  protected scheduleCloseSocket() {
+    if (this.closeSocketTimeout) {
+      return;
+    }
+
+    this.closeSocketTimeout = setTimeout(() => {
+      this.closeSocketTimeout = undefined;
+
+      if (this.subscribersByKey.size === 0) {
+        this.closeSocket();
+      }
+    }, WebSocketTransport.closeDelayMs);
+  }
+
+  protected cancelCloseSocketTimeout() {
+    if (!this.closeSocketTimeout) {
+      return;
+    }
+
+    clearTimeout(this.closeSocketTimeout);
+    this.closeSocketTimeout = undefined;
   }
 
   protected handleOpen = (() => {
