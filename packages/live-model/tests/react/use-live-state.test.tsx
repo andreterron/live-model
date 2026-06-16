@@ -39,6 +39,14 @@ describe('react useLiveState', () => {
     await waitFor(() => expect(result.current.value).toBe(1));
   });
 
+  test('websocket lives start as loading before the server state arrives', async () => {
+    let { result } = renderHook(() => useLiveState('one'));
+
+    expect(result.current.live.get()).toEqual({ kind: 'loading' });
+
+    await waitFor(() => expect(result.current.value).toBe(1));
+  });
+
   test('values can be set', async () => {
     let { result } = renderHook(() => useLiveState('one'));
     await waitFor(() => expect(result.current.value).toBe(1));

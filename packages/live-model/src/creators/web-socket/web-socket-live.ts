@@ -1,7 +1,7 @@
 import {
   type DeleteMessage,
-  type Message,
-  type SnapshotMessage,
+  type SetValueMessage,
+  type StateMessage,
 } from '@live-model/protocol';
 import { type ZodType } from 'zod';
 import { BaseLive } from '../../live.js';
@@ -14,6 +14,7 @@ import {
 } from './web-socket-transport.js';
 
 export interface WebSocketLiveOptions<T> {
+  // TODO: Review whether `validator` should be on this Live, or if it should be a Live wrapper
   validator?: ZodType<T, any, any>;
   transport?: WebSocketTransport;
 }
@@ -21,8 +22,7 @@ export interface WebSocketLiveOptions<T> {
 export class WebSocketLive<T> extends BaseLive<T> {
   static defaultTransport = new WebSocketTransport('ws://127.0.0.1:3001');
 
-  // TODO: Initial state should probably be .loading, as long as it's actually loading from somewhere.
-  protected state: LiveState<T> = LiveState.absent('not_found');
+  protected state: LiveState<T> = LiveState.loading;
   protected transport: WebSocketTransport;
   protected transportConnection?: WebSocketTransportConnection;
 
@@ -61,7 +61,7 @@ export class WebSocketLive<T> extends BaseLive<T> {
 
   setValue(value: T): void {
     this.state = LiveState.value(value);
-    this.sendSnapshot(value);
+    this.sendSetValue(value);
     this.notifyLiveState(this.state);
   }
 
@@ -71,9 +71,9 @@ export class WebSocketLive<T> extends BaseLive<T> {
     this.notifyLiveState(this.state);
   }
 
-  protected sendSnapshot(data: T) {
-    const message: SnapshotMessage<T> = {
-      type: 'snapshot',
+  protected sendSetValue(data: T) {
+    const message: SetValueMessage<T> = {
+      type: 'set_value',
       key: this.key,
       data,
     };
@@ -109,34 +109,25 @@ export class WebSocketLive<T> extends BaseLive<T> {
     this.transportConnection = undefined;
   }
 
-  protected handleMessage = ((message: Message) => {
-    switch (message.type) {
-      case 'delete':
-        this.state = LiveState.absent('deleted');
-        this.notifyLiveState(this.state);
-        return;
+  protected handleMessage = ((message: StateMessage) => {
+    try {
+      if (message.state.kind === 'value') {
+        const value = this.options.validator
+          ? this.options.validator.parse(message.state.value)
+          : (message.state.value as T);
 
-      case 'snapshot':
-        try {
-          const value = this.options.validator
-            ? this.options.validator.parse(message.data)
-            : (message.data as T);
+        this.state = LiveState.value(value);
+      } else {
+        this.state = message.state;
+      }
 
-          this.state = LiveState.value(value);
-          this.notifyLiveState(this.state);
-        } catch (error) {
-          console.error(
-            '[LiveModel] Failed to read WebSocketLive message',
-            error
-          );
-          this.notifyNonDestructiveError(error);
-        }
-        return;
-
-      default:
-        this.notifyNonDestructiveError(
-          new Error(`Unsupported WebSocketLive message type: ${message.type}`)
-        );
+      this.notifyLiveState(this.state);
+    } catch (error) {
+      console.error(
+        '[LiveModel] Failed to read WebSocketLive state message',
+        error
+      );
+      this.notifyNonDestructiveError(error);
     }
   }).bind(this);
 

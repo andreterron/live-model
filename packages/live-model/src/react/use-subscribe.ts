@@ -30,7 +30,7 @@ export function useSubscribe<T>(
           sub.unsubscribe();
         };
       },
-      () => HACKY_getCurrentLiveValue(live, 'useSubscribe.getSnapshot'),
+      () => HACKY_getCurrentLiveValue(live),
       (v: T) => {
         live.setValue(v);
       },

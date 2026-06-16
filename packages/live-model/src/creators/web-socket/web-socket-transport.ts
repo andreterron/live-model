@@ -1,8 +1,11 @@
 import {
   deleteMessageSchema,
-  snapshotMessageSchema,
+  setValueMessageSchema,
+  stateMessageSchema,
   type DeleteMessage,
-  type SnapshotMessage,
+  type SetValueMessage,
+  type StateMessage,
+  type SubscribeMessage,
 } from '@live-model/protocol';
 import type { Subscription } from '../../reactivity/subscription.js';
 
@@ -12,15 +15,19 @@ export interface WebSocketTransportOptions {
 }
 
 export interface WebSocketTransportSubscriber {
-  message(message: SnapshotMessage | DeleteMessage): void;
+  message(message: StateMessage): void;
   close?(event: CloseEvent): void;
   error?(event: Event): void;
   open?(): void;
 }
 
 export interface WebSocketTransportConnection extends Subscription {
-  send(message: SnapshotMessage | DeleteMessage): void;
+  send(message: WebSocketTransportWriteMessage): void;
 }
+
+export type WebSocketTransportIncomingMessage = StateMessage;
+
+export type WebSocketTransportWriteMessage = SetValueMessage | DeleteMessage;
 
 type WebSocketTransportConnectionInternal = WebSocketTransportConnection & {
   key: string;
@@ -77,11 +84,14 @@ export class WebSocketTransport {
 
     connections.add(connection);
     this.connect();
+    this.sendSubscribe(key);
 
     return connection;
   }
 
-  protected send(message: SnapshotMessage | DeleteMessage): void {
+  protected send(
+    message: WebSocketTransportWriteMessage | SubscribeMessage
+  ): void {
     const serialized = JSON.stringify(message);
     const WebSocketCtor = this.getWebSocketConstructor();
 
@@ -93,6 +103,13 @@ export class WebSocketTransport {
     }
 
     this.socket.send(serialized);
+  }
+
+  protected sendSubscribe(key: string): void {
+    this.send({
+      type: 'subscribe',
+      key,
+    });
   }
 
   protected connect() {
@@ -218,25 +235,19 @@ export class WebSocketTransport {
 
   protected parseMessage(
     value: unknown
-  ): SnapshotMessage | DeleteMessage | undefined {
-    const snapshotResult = snapshotMessageSchema.safeParse(value);
+  ): WebSocketTransportIncomingMessage | undefined {
+    const stateResult = stateMessageSchema.safeParse(value);
 
-    if (snapshotResult.success) {
-      return snapshotResult.data as SnapshotMessage;
+    if (stateResult.success) {
+      return stateResult.data as StateMessage;
     }
 
-    const deleteResult = deleteMessageSchema.safeParse(value);
-
-    if (deleteResult.success) {
-      return deleteResult.data as DeleteMessage;
-    }
-
-    return undefined;
+    return this.parseActionMessageAsState(value);
   }
 
   protected forwardToSubscribers(
     sender: WebSocketTransportConnectionInternal,
-    message: SnapshotMessage | DeleteMessage
+    message: WebSocketTransportWriteMessage
   ) {
     const connections = this.subscribersByKey.get(message.key);
 
@@ -249,8 +260,50 @@ export class WebSocketTransport {
         continue;
       }
 
-      connection.subscriber.message(message);
+      connection.subscriber.message(this.actionMessageToState(message));
     }
+  }
+
+  protected parseActionMessageAsState(
+    value: unknown
+  ): StateMessage | undefined {
+    const setValueResult = setValueMessageSchema.safeParse(value);
+
+    if (setValueResult.success) {
+      return this.actionMessageToState(setValueResult.data as SetValueMessage);
+    }
+
+    const deleteResult = deleteMessageSchema.safeParse(value);
+
+    if (deleteResult.success) {
+      return this.actionMessageToState(deleteResult.data as DeleteMessage);
+    }
+
+    return undefined;
+  }
+
+  protected actionMessageToState(
+    message: WebSocketTransportWriteMessage
+  ): StateMessage {
+    if (message.type === 'set_value') {
+      return {
+        type: 'state',
+        key: message.key,
+        state: {
+          kind: 'value',
+          value: message.data,
+        },
+      };
+    }
+
+    return {
+      type: 'state',
+      key: message.key,
+      state: {
+        kind: 'absent',
+        reason: 'deleted',
+      },
+    };
   }
 
   protected getAllSubscribers() {

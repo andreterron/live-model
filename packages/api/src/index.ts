@@ -1,6 +1,7 @@
 import {
+  type LiveStateLike,
   type Message,
-  type SnapshotMessage,
+  type StateMessage,
   protocolMessageSchema,
 } from '@live-model/protocol';
 import type { Peer } from 'crossws';
@@ -14,7 +15,7 @@ const databasePath = process.env.LIVE_MODEL_DB_PATH ?? 'live-model.sqlite';
 const peers = new Set<Peer>();
 
 interface EntityStore {
-  selectEntities: StatementSync;
+  selectEntity: StatementSync;
   upsertEntity: StatementSync;
   deleteEntity: StatementSync;
 }
@@ -36,9 +37,7 @@ function getEntityStore(): EntityStore {
   `);
 
   entityStore = {
-    selectEntities: database.prepare(
-      'SELECT key, data FROM entities ORDER BY key'
-    ),
+    selectEntity: database.prepare('SELECT data FROM entities WHERE key = ?'),
     upsertEntity: database.prepare(`
       INSERT INTO entities (key, data)
       VALUES (?, ?)
@@ -67,7 +66,7 @@ function persistMessage(message: Message): boolean {
     return true;
   }
 
-  if (!('data' in message)) {
+  if (message.type !== 'set_value') {
     return false;
   }
 
@@ -81,16 +80,42 @@ function persistMessage(message: Message): boolean {
   return true;
 }
 
-function sendSnapshotMessages(peer: Peer) {
-  for (const row of getEntityStore().selectEntities.iterate()) {
-    const message: SnapshotMessage = {
-      type: 'snapshot',
-      key: row.key as string,
-      data: JSON.parse(row.data as string),
-    };
-
-    peer.send(JSON.stringify(message));
+function getProcessedLiveState(message: Message): LiveStateLike | undefined {
+  if (message.type === 'delete') {
+    return { kind: 'absent', reason: 'deleted' };
   }
+
+  if (message.type === 'set_value') {
+    return {
+      kind: 'value',
+      value: message.data,
+    };
+  }
+
+  return undefined;
+}
+
+function getLiveState(key: string): LiveStateLike {
+  const row = getEntityStore().selectEntity.get(key);
+
+  if (!row) {
+    return { kind: 'absent', reason: 'not_found' };
+  }
+
+  return {
+    kind: 'value',
+    value: JSON.parse((row as { data: string }).data),
+  };
+}
+
+function sendStateMessage(peer: Peer, key: string) {
+  const message: StateMessage = {
+    type: 'state',
+    key,
+    state: getLiveState(key),
+  };
+
+  peer.send(JSON.stringify(message));
 }
 
 function sendError(peer: Peer, error: string) {
@@ -107,6 +132,22 @@ function broadcastToOtherPeers(sender: Peer, messageText: string) {
   }
 }
 
+function broadcastStateToOtherPeers(sender: Peer, message: Message) {
+  const state = getProcessedLiveState(message);
+
+  if (!state) {
+    return;
+  }
+
+  const stateMessage: StateMessage = {
+    type: 'state',
+    key: message.key,
+    state,
+  };
+
+  broadcastToOtherPeers(sender, JSON.stringify(stateMessage));
+}
+
 const server = serve({
   middleware: [serveStatic({ dir: 'public' })],
   manual: true,
@@ -114,7 +155,6 @@ const server = serve({
   port,
   websocket: {
     open(peer) {
-      sendSnapshotMessages(peer);
       peers.add(peer);
       console.log('[ws] open', peer.toString());
     },
@@ -138,12 +178,17 @@ const server = serve({
         return;
       }
 
+      if (protocolMessage.type === 'subscribe') {
+        sendStateMessage(peer, protocolMessage.key);
+        return;
+      }
+
       if (!persistMessage(protocolMessage)) {
         sendError(peer, 'Protocol message must include data');
         return;
       }
 
-      broadcastToOtherPeers(peer, messageText);
+      broadcastStateToOtherPeers(peer, protocolMessage);
     },
 
     close(peer, event) {

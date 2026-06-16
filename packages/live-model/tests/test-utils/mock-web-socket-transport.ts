@@ -1,6 +1,7 @@
 import type {
   DeleteMessage,
-  SnapshotMessage,
+  SetValueMessage,
+  StateMessage,
 } from '@live-model/protocol';
 import { act } from '@testing-library/react';
 import {
@@ -10,7 +11,7 @@ import {
   type WebSocketTransportSubscriber,
 } from '../../src/index.js';
 
-type Message = SnapshotMessage | DeleteMessage;
+type WriteMessage = SetValueMessage | DeleteMessage;
 
 type Connection = WebSocketTransportConnection & {
   key: string;
@@ -45,7 +46,7 @@ class MockWebSocketTransport extends WebSocketTransport {
       subscriber,
       send: (message) => {
         this.applyMessage(message);
-        this.broadcast(message, connection);
+        this.broadcast(this.actionMessageToState(message), connection);
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -58,15 +59,25 @@ class MockWebSocketTransport extends WebSocketTransport {
 
     connections.add(connection);
     queueMicrotask(() => {
-      if (!connections.has(connection) || !this.values.has(key)) {
+      if (!connections.has(connection)) {
         return;
       }
 
       act(() => {
+        const state: StateMessage['state'] = this.values.has(key)
+          ? {
+              kind: 'value',
+              value: this.values.get(key),
+            }
+          : {
+              kind: 'absent',
+              reason: 'not_found',
+            };
+
         subscriber.message({
-          type: 'snapshot',
+          type: 'state',
           key,
-          data: this.values.get(key),
+          state,
         });
       });
     });
@@ -74,8 +85,8 @@ class MockWebSocketTransport extends WebSocketTransport {
     return connection;
   }
 
-  private applyMessage(message: Message) {
-    if (message.type === 'snapshot') {
+  private applyMessage(message: WriteMessage) {
+    if (message.type === 'set_value') {
       this.values.set(message.key, message.data);
       return;
     }
@@ -83,7 +94,7 @@ class MockWebSocketTransport extends WebSocketTransport {
     this.values.delete(message.key);
   }
 
-  private broadcast(message: Message, sender: Connection) {
+  private broadcast(message: StateMessage, sender: Connection) {
     const connections = this.connectionsByKey.get(message.key);
 
     if (!connections) {
@@ -103,6 +114,28 @@ class MockWebSocketTransport extends WebSocketTransport {
         }
       });
     }
+  }
+
+  override actionMessageToState(message: WriteMessage): StateMessage {
+    if (message.type === 'set_value') {
+      return {
+        type: 'state',
+        key: message.key,
+        state: {
+          kind: 'value',
+          value: message.data,
+        },
+      };
+    }
+
+    return {
+      type: 'state',
+      key: message.key,
+      state: {
+        kind: 'absent',
+        reason: 'deleted',
+      },
+    };
   }
 }
 

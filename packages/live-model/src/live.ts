@@ -50,7 +50,7 @@ export abstract class BaseLive<T> implements Live<T> {
  */
 export function HACKY_getCurrentLiveValue<T>(
   live: Live<T>,
-  operationName: string
+  operationName?: string
 ): T | undefined {
   // TODO: Refactor the codebase to delete this whole function
   const state = live.get();
@@ -62,11 +62,13 @@ export function HACKY_getCurrentLiveValue<T>(
     return undefined;
   }
   if (state.kind !== 'value') {
-    const stateString =
-      state.kind === 'absent' ? `absent/${state.reason}` : state.kind;
-    console.error(
-      `[LiveModel] Execution operation "${operationName}" on invalid state/reason: ${stateString}`
-    );
+    if (operationName) {
+      const stateString =
+        state.kind === 'absent' ? `absent/${state.reason}` : state.kind;
+      console.error(
+        `[LiveModel] Execution operation "${operationName}" on invalid state/reason: ${stateString}`
+      );
+    }
     return undefined;
   }
   return state.value;

@@ -75,4 +75,124 @@ describe('WebSocketTransport', () => {
 
     expect(MockWebSocket.instances[0].close).toHaveBeenCalledTimes(1);
   });
+
+  test('sends a subscribe message when a connection subscribes to a key', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+
+    transport.subscribe('people.1', { message: vi.fn() });
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'subscribe',
+        key: 'people.1',
+      })
+    );
+  });
+
+  test('sends set_value messages to the socket', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+
+    const connection = transport.subscribe('people.1', { message: vi.fn() });
+
+    connection.send({
+      type: 'set_value',
+      key: 'people.1',
+      data: { id: 'people.1' },
+    });
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'set_value',
+        key: 'people.1',
+        data: { id: 'people.1' },
+      })
+    );
+  });
+
+  test('routes state messages to subscribers for the matching key', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const peopleOneMessage = vi.fn();
+    const peopleTwoMessage = vi.fn();
+
+    transport.subscribe('people.1', { message: peopleOneMessage });
+    transport.subscribe('people.2', { message: peopleTwoMessage });
+
+    const message = {
+      type: 'state',
+      key: 'people.1',
+      state: {
+        kind: 'value',
+        value: { id: 'people.1' },
+      },
+    };
+
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', { data: JSON.stringify(message) })
+    );
+
+    expect(peopleOneMessage).toHaveBeenCalledWith(message);
+    expect(peopleTwoMessage).not.toHaveBeenCalled();
+  });
+
+  test('forwards local set_value messages to other subscribers as state', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const senderMessage = vi.fn();
+    const receiverMessage = vi.fn();
+
+    const connection = transport.subscribe('people.1', {
+      message: senderMessage,
+    });
+    transport.subscribe('people.1', { message: receiverMessage });
+
+    connection.send({
+      type: 'set_value',
+      key: 'people.1',
+      data: { id: 'people.1' },
+    });
+
+    expect(senderMessage).not.toHaveBeenCalled();
+    expect(receiverMessage).toHaveBeenCalledWith({
+      type: 'state',
+      key: 'people.1',
+      state: {
+        kind: 'value',
+        value: { id: 'people.1' },
+      },
+    });
+  });
+
+  test('routes inbound action messages as state messages', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const messageHandler = vi.fn();
+
+    transport.subscribe('people.1', { message: messageHandler });
+
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'delete',
+          key: 'people.1',
+        }),
+      })
+    );
+
+    expect(messageHandler).toHaveBeenCalledWith({
+      type: 'state',
+      key: 'people.1',
+      state: {
+        kind: 'absent',
+        reason: 'deleted',
+      },
+    });
+  });
 });
