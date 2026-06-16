@@ -2,32 +2,35 @@
  * @jest-environment jsdom
  */
 
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import {
   LiveHookWithDefaultReturn,
   SettableMemoryLive,
   useLiveState,
   useSubscribe,
 } from '../../src/index.js';
-import { clearData, mockData } from '../test-utils/mock-data.js';
+import {
+  clearWebSocketData,
+  mockWebSocketData,
+} from '../test-utils/mock-web-socket-transport.js';
 import { RefObject } from 'react';
 
 describe('react useSubscribe', () => {
   let liveState: RefObject<LiveHookWithDefaultReturn<number>>;
 
   beforeEach(() => {
-    mockData({ one: 1 });
+    mockWebSocketData({ one: 1 });
     let { result } = renderHook(() => useLiveState<number>('one', 1));
     liveState = result;
   });
 
   afterEach(() => {
-    clearData();
+    clearWebSocketData();
   });
 
   test('can subscribe to a live', async () => {
     let { result } = renderHook(() => useSubscribe(liveState.current.live));
-    expect(result.current.value).toBe(1);
+    await waitFor(() => expect(result.current.value).toBe(1));
     expectTypeOf(result.current.value).toEqualTypeOf<number | undefined>();
   });
 
@@ -39,7 +42,7 @@ describe('react useSubscribe', () => {
       renderSpy();
       return useSubscribe(liveState.current.live);
     });
-    expect(result.current.value).toBe(1);
+    await waitFor(() => expect(result.current.value).toBe(1));
     expect(renderSpy).toHaveBeenCalledOnce();
   });
 

@@ -2,27 +2,30 @@
  * @jest-environment jsdom
  */
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import {
   LiveHookReturn,
   useDerived,
   useDerivedValue,
   useLiveState,
 } from '../../src/index.js';
-import { clearData, mockData } from '../test-utils/mock-data.js';
+import {
+  clearWebSocketData,
+  mockWebSocketData,
+} from '../test-utils/mock-web-socket-transport.js';
 import { RefObject } from 'react';
 
 describe('react useDerived', () => {
   let liveState: RefObject<LiveHookReturn<number>>;
 
   beforeEach(() => {
-    mockData({ one: 1 });
+    mockWebSocketData({ one: 1 });
     let { result } = renderHook(() => useLiveState<number>('one'));
     liveState = result;
   });
 
   afterEach(() => {
-    clearData();
+    clearWebSocketData();
   });
 
   test('can define a transformation function based on a dependency', async () => {
@@ -31,7 +34,7 @@ describe('react useDerived', () => {
         v.kind === 'value' ? { ...v, value: v.value + 1 } : v
       )
     );
-    expect(result.current.value).toBe(2);
+    await waitFor(() => expect(result.current.value).toBe(2));
     expectTypeOf(result.current.value).toEqualTypeOf<number | undefined>();
   });
 

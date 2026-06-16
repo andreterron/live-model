@@ -5,6 +5,7 @@ import { LiveSetter } from '../setter.js';
 import { mapState, valueTransform } from '../operators/map.js';
 import { LiveDeleter } from '../deleter.js';
 import { LiveState } from '../value-state.js';
+import { useSubscribe } from './use-subscribe.js';
 
 /**
  * @param live source of values
@@ -25,12 +26,10 @@ export function useDerived<T, U>(
     [live]
   );
 
-  const state = derived.get();
-  const setValue = useCallback((u: U) => derived.setValue(u), [derived]);
-  const deleteValue = useCallback(() => derived.deleteValue(), [derived]);
+  const { value, setValue, deleteValue } = useSubscribe(derived);
 
   return {
-    value: state.kind === 'value' ? state.value : undefined,
+    value,
     setValue,
     deleteValue,
     live: derived,

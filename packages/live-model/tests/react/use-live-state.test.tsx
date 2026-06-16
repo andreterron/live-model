@@ -2,13 +2,16 @@
  * @jest-environment jsdom
  */
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import {
   LiveHookWithDefaultReturn,
   Live,
   useLiveState,
 } from '../../src/index.js';
-import { clearData, mockData } from '../test-utils/mock-data.js';
+import {
+  clearWebSocketData,
+  mockWebSocketData,
+} from '../test-utils/mock-web-socket-transport.js';
 
 function getLive<T extends LiveHookWithDefaultReturn<any>>(
   render: () => T
@@ -18,11 +21,11 @@ function getLive<T extends LiveHookWithDefaultReturn<any>>(
 
 describe('react useLiveState', () => {
   beforeEach(() => {
-    mockData({ one: 1 });
+    mockWebSocketData({ one: 1 });
   });
 
   afterEach(() => {
-    clearData();
+    clearWebSocketData();
   });
 
   test('unitialized key returns undefined', async () => {
@@ -33,16 +36,16 @@ describe('react useLiveState', () => {
   test('existing keys return their value', async () => {
     let { result } = renderHook(() => useLiveState('one'));
 
-    expect(result.current.value).toBe(1);
+    await waitFor(() => expect(result.current.value).toBe(1));
   });
 
   test('values can be set', async () => {
     let { result } = renderHook(() => useLiveState('one'));
-    expect(result.current.value).toBe(1);
+    await waitFor(() => expect(result.current.value).toBe(1));
 
     act(() => result.current.setValue(2));
 
-    expect(result.current.value).toBe(2);
+    await waitFor(() => expect(result.current.value).toBe(2));
   });
 
   describe('type inferred', () => {
