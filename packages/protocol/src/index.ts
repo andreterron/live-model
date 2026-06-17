@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const allKeysKey = '_livemodel.all_keys';
+
 // TODO: The zod schemas and interfaces aren't linked. Parsing with the
 // schema should yield the right types. Tricky because of generics.
 // Maybe remove generics from Messages

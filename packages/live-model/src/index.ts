@@ -18,6 +18,7 @@ export * from './model/model.js';
 // React
 export type * from './react/hook-types.js';
 export * from './react/use-derived.js';
+export * from './react/use-all-keys.js';
 export * from './react/use-live-state.js';
 export * from './react/use-model.js';
 export * from './react/use-subscribe.js';

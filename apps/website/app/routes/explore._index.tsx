@@ -1,4 +1,4 @@
-import { generateId } from 'live-model';
+import { generateId, useAllKeys, WebSocketLive } from 'live-model';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -12,7 +12,6 @@ import {
   CommandList,
   CommandSeparator,
 } from '../components/ui/command';
-import { useLocalStorageKeys } from '../hooks/use-local-storage-keys';
 import type { Route } from './+types/explore._index';
 
 const createNewEntityLabel = 'Create new Entity';
@@ -28,7 +27,7 @@ export default function ExploreIndexPage() {
   // TODO: How do we use Live Model in this environment with no schemas/types??
 
   // TODO: This feels like it should be in LiveModel. Maybe as a Live<string[]> itself.
-  const keys = useLocalStorageKeys();
+  const keys = useAllKeys();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const trimmedSearch = search.trim();
@@ -53,11 +52,7 @@ export default function ExploreIndexPage() {
   };
 
   const createEntity = (id: string) => {
-    if (localStorage.getItem(id) === null) {
-      localStorage.setItem(id, JSON.stringify({}));
-      window.dispatchEvent(new StorageEvent('local-storage', { key: id }));
-    }
-
+    new WebSocketLive<Record<string, never>>(id).setValue({});
     openEntity(id);
   };
 

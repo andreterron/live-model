@@ -1,4 +1,5 @@
 import {
+  allKeysKey,
   type LiveStateLike,
   type Message,
   type StateMessage,
@@ -16,6 +17,7 @@ const peers = new Set<Peer>();
 
 interface EntityStore {
   selectEntity: StatementSync;
+  selectKeys: StatementSync;
   upsertEntity: StatementSync;
   deleteEntity: StatementSync;
 }
@@ -38,6 +40,9 @@ function getEntityStore(): EntityStore {
 
   entityStore = {
     selectEntity: database.prepare('SELECT data FROM entities WHERE key = ?'),
+    // Temporary explorer support. The final API will not expose key listing,
+    // so this intentionally uses a simple full-table key scan.
+    selectKeys: database.prepare('SELECT key FROM entities ORDER BY key'),
     upsertEntity: database.prepare(`
       INSERT INTO entities (key, data)
       VALUES (?, ?)
@@ -61,6 +66,10 @@ function parseProtocolMessage(text: string): Message | undefined {
 }
 
 function persistMessage(message: Message): boolean {
+  if (message.key === allKeysKey) {
+    return false;
+  }
+
   if (message.type === 'delete') {
     getEntityStore().deleteEntity.run(message.key);
     return true;
@@ -96,6 +105,13 @@ function getProcessedLiveState(message: Message): LiveStateLike | undefined {
 }
 
 function getLiveState(key: string): LiveStateLike {
+  if (key === allKeysKey) {
+    return {
+      kind: 'value',
+      value: getAllKeys(),
+    };
+  }
+
   const row = getEntityStore().selectEntity.get(key);
 
   if (!row) {
@@ -108,14 +124,23 @@ function getLiveState(key: string): LiveStateLike {
   };
 }
 
-function sendStateMessage(peer: Peer, key: string) {
-  const message: StateMessage = {
+function getAllKeys(): string[] {
+  return getEntityStore()
+    .selectKeys.all()
+    .map((row) => row.key as string)
+    .filter((key) => key !== allKeysKey);
+}
+
+function createStateMessage(key: string, state: LiveStateLike): StateMessage {
+  return {
     type: 'state',
     key,
-    state: getLiveState(key),
+    state,
   };
+}
 
-  peer.send(JSON.stringify(message));
+function sendStateMessage(peer: Peer, key: string) {
+  peer.send(JSON.stringify(createStateMessage(key, getLiveState(key))));
 }
 
 function sendError(peer: Peer, error: string) {
@@ -139,13 +164,20 @@ function broadcastStateToOtherPeers(sender: Peer, message: Message) {
     return;
   }
 
-  const stateMessage: StateMessage = {
-    type: 'state',
-    key: message.key,
-    state,
-  };
+  broadcastToOtherPeers(
+    sender,
+    JSON.stringify(createStateMessage(message.key, state))
+  );
+}
 
-  broadcastToOtherPeers(sender, JSON.stringify(stateMessage));
+function broadcastAllKeysState() {
+  const message = JSON.stringify(
+    createStateMessage(allKeysKey, getLiveState(allKeysKey))
+  );
+
+  for (const peer of peers) {
+    peer.send(message);
+  }
 }
 
 const server = serve({
@@ -189,6 +221,7 @@ const server = serve({
       }
 
       broadcastStateToOtherPeers(peer, protocolMessage);
+      broadcastAllKeysState();
     },
 
     close(peer, event) {
