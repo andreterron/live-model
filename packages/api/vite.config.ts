@@ -1,3 +1,4 @@
+/// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import * as path from 'path';
@@ -28,5 +29,12 @@ export default defineConfig(() => ({
     rollupOptions: {
       external: (source: string) => !source.match(/\.[tj]sx?$/),
     },
+  },
+  test: {
+    watch: false,
+    globals: true,
+    environment: 'node',
+    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}'],
+    reporters: ['default'],
   },
 }));
