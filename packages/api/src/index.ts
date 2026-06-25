@@ -13,7 +13,8 @@ import { serveStatic } from 'srvx/static';
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 const hostname = process.env.HOST ?? '127.0.0.1';
 const databasePath = process.env.LIVE_MODEL_DB_PATH ?? 'live-model.sqlite';
-const peers = new Set<Peer>();
+const peerSubscriptions = new Map<Peer, Set<string>>();
+const subscribedPeersByKey = new Map<string, Set<Peer>>();
 
 interface EntityStore {
   selectEntity: StatementSync;
@@ -147,8 +148,86 @@ function sendError(peer: Peer, error: string) {
   peer.send(JSON.stringify({ error }));
 }
 
-function broadcastToOtherPeers(sender: Peer, messageText: string) {
-  for (const peer of peers) {
+function subscribePeer(peer: Peer, key: string) {
+  let subscriptions = peerSubscriptions.get(peer);
+
+  if (!subscriptions) {
+    subscriptions = new Set();
+    peerSubscriptions.set(peer, subscriptions);
+  }
+
+  subscriptions.add(key);
+
+  let subscribedPeers = subscribedPeersByKey.get(key);
+
+  if (!subscribedPeers) {
+    subscribedPeers = new Set();
+    subscribedPeersByKey.set(key, subscribedPeers);
+  }
+
+  subscribedPeers.add(peer);
+}
+
+function unsubscribePeer(peer: Peer, key: string) {
+  const subscriptions = peerSubscriptions.get(peer);
+
+  if (subscriptions) {
+    subscriptions.delete(key);
+
+    if (subscriptions.size === 0) {
+      peerSubscriptions.delete(peer);
+    }
+  }
+
+  const subscribedPeers = subscribedPeersByKey.get(key);
+
+  if (!subscribedPeers) {
+    return;
+  }
+
+  subscribedPeers.delete(peer);
+
+  if (subscribedPeers.size === 0) {
+    subscribedPeersByKey.delete(key);
+  }
+}
+
+function unsubscribePeerFromAllKeys(peer: Peer) {
+  const subscriptions = peerSubscriptions.get(peer);
+
+  if (!subscriptions) {
+    return;
+  }
+
+  for (const key of subscriptions) {
+    const subscribedPeers = subscribedPeersByKey.get(key);
+
+    if (!subscribedPeers) {
+      continue;
+    }
+
+    subscribedPeers.delete(peer);
+
+    if (subscribedPeers.size === 0) {
+      subscribedPeersByKey.delete(key);
+    }
+  }
+
+  peerSubscriptions.delete(peer);
+}
+
+function broadcastToSubscribedPeers(
+  key: string,
+  messageText: string,
+  sender?: Peer
+) {
+  const subscribedPeers = subscribedPeersByKey.get(key);
+
+  if (!subscribedPeers) {
+    return;
+  }
+
+  for (const peer of subscribedPeers) {
     if (peer === sender) {
       continue;
     }
@@ -164,9 +243,10 @@ function broadcastStateToOtherPeers(sender: Peer, message: Message) {
     return;
   }
 
-  broadcastToOtherPeers(
-    sender,
-    JSON.stringify(createStateMessage(message.key, state))
+  broadcastToSubscribedPeers(
+    message.key,
+    JSON.stringify(createStateMessage(message.key, state)),
+    sender
   );
 }
 
@@ -175,7 +255,13 @@ function broadcastAllKeysState() {
     createStateMessage(allKeysKey, getLiveState(allKeysKey))
   );
 
-  for (const peer of peers) {
+  const subscribedPeers = subscribedPeersByKey.get(allKeysKey);
+
+  if (!subscribedPeers) {
+    return;
+  }
+
+  for (const peer of subscribedPeers) {
     peer.send(message);
   }
 }
@@ -187,7 +273,6 @@ const server = serve({
   port,
   websocket: {
     open(peer) {
-      peers.add(peer);
       console.log('[ws] open', peer.toString());
     },
 
@@ -211,7 +296,13 @@ const server = serve({
       }
 
       if (protocolMessage.type === 'subscribe') {
+        subscribePeer(peer, protocolMessage.key);
         sendStateMessage(peer, protocolMessage.key);
+        return;
+      }
+
+      if (protocolMessage.type === 'unsubscribe') {
+        unsubscribePeer(peer, protocolMessage.key);
         return;
       }
 
@@ -225,7 +316,7 @@ const server = serve({
     },
 
     close(peer, event) {
-      peers.delete(peer);
+      unsubscribePeerFromAllKeys(peer);
       console.log('[ws] close', peer.toString(), event);
     },
 

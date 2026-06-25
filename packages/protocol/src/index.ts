@@ -56,6 +56,14 @@ export const subscribeMessageSchema = z.object({
   targets: z.any().optional(),
 });
 
+export const unsubscribeMessageSchema = z.object({
+  type: z.literal('unsubscribe'),
+  // TODO: Replace key with targets.
+  key: z.string(),
+  // TODO: Define action targets.
+  targets: z.any().optional(),
+});
+
 export const stateMessageSchema = z.object({
   type: z.literal('state'),
   // TODO: Replace key with targets.
@@ -69,6 +77,7 @@ export const protocolMessageSchema = z.discriminatedUnion('type', [
   setValueMessageSchema,
   deleteMessageSchema,
   subscribeMessageSchema,
+  unsubscribeMessageSchema,
 ]);
 
 export type LiveStateLike<T = unknown> =
@@ -110,6 +119,11 @@ export interface DeleteMessage extends Message {
 
 export interface SubscribeMessage extends Message {
   type: 'subscribe';
+  data?: never;
+}
+
+export interface UnsubscribeMessage extends Message {
+  type: 'unsubscribe';
   data?: never;
 }
 

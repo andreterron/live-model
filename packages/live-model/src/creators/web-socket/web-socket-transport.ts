@@ -6,6 +6,7 @@ import {
   type SetValueMessage,
   type StateMessage,
   type SubscribeMessage,
+  type UnsubscribeMessage,
 } from '@live-model/protocol';
 import type { Subscription } from '../../reactivity/subscription.js';
 
@@ -43,6 +44,10 @@ export class WebSocketTransport {
     string,
     Set<WebSocketTransportConnectionInternal>
   >();
+  protected unsubscribeTimeoutsByKey = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
   constructor(
     protected url: string | URL,
@@ -56,6 +61,8 @@ export class WebSocketTransport {
     this.cancelCloseSocketTimeout();
 
     let connections = this.subscribersByKey.get(key);
+
+    const isFirstConnectionForKey = !connections;
 
     if (!connections) {
       connections = new Set();
@@ -74,6 +81,7 @@ export class WebSocketTransport {
 
         if (connections.size === 0) {
           this.subscribersByKey.delete(key);
+          this.scheduleUnsubscribe(key);
         }
 
         if (this.subscribersByKey.size === 0) {
@@ -83,14 +91,21 @@ export class WebSocketTransport {
     };
 
     connections.add(connection);
+    this.cancelUnsubscribe(key);
     this.connect();
-    this.sendSubscribe(key);
+
+    if (isFirstConnectionForKey) {
+      this.sendSubscribe(key);
+    }
 
     return connection;
   }
 
   protected send(
-    message: WebSocketTransportWriteMessage | SubscribeMessage
+    message:
+      | WebSocketTransportWriteMessage
+      | SubscribeMessage
+      | UnsubscribeMessage
   ): void {
     const serialized = JSON.stringify(message);
     const WebSocketCtor = this.getWebSocketConstructor();
@@ -108,6 +123,13 @@ export class WebSocketTransport {
   protected sendSubscribe(key: string): void {
     this.send({
       type: 'subscribe',
+      key,
+    });
+  }
+
+  protected sendUnsubscribe(key: string): void {
+    this.send({
+      type: 'unsubscribe',
       key,
     });
   }
@@ -164,6 +186,22 @@ export class WebSocketTransport {
     }, WebSocketTransport.closeDelayMs);
   }
 
+  protected scheduleUnsubscribe(key: string) {
+    if (this.unsubscribeTimeoutsByKey.has(key)) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      this.unsubscribeTimeoutsByKey.delete(key);
+
+      if (!this.subscribersByKey.has(key) && this.socket) {
+        this.sendUnsubscribe(key);
+      }
+    }, WebSocketTransport.closeDelayMs);
+
+    this.unsubscribeTimeoutsByKey.set(key, timeout);
+  }
+
   protected cancelCloseSocketTimeout() {
     if (!this.closeSocketTimeout) {
       return;
@@ -171,6 +209,17 @@ export class WebSocketTransport {
 
     clearTimeout(this.closeSocketTimeout);
     this.closeSocketTimeout = undefined;
+  }
+
+  protected cancelUnsubscribe(key: string) {
+    const timeout = this.unsubscribeTimeoutsByKey.get(key);
+
+    if (!timeout) {
+      return;
+    }
+
+    clearTimeout(timeout);
+    this.unsubscribeTimeoutsByKey.delete(key);
   }
 
   protected handleOpen = (() => {

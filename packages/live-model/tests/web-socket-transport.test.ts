@@ -91,6 +91,74 @@ describe('WebSocketTransport', () => {
     );
   });
 
+  test('only sends one subscribe message for multiple connections to the same key', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+
+    transport.subscribe('people.1', { message: vi.fn() });
+    transport.subscribe('people.1', { message: vi.fn() });
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledTimes(1);
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'subscribe',
+        key: 'people.1',
+      })
+    );
+  });
+
+  test('sends an unsubscribe message after a key has no connections for 5 seconds', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+
+    const connection = transport.subscribe('people.1', { message: vi.fn() });
+    connection.unsubscribe();
+
+    vi.advanceTimersByTime(4_999);
+
+    expect(MockWebSocket.instances[0].send).not.toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'unsubscribe',
+        key: 'people.1',
+      })
+    );
+
+    vi.advanceTimersByTime(1);
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'unsubscribe',
+        key: 'people.1',
+      })
+    );
+  });
+
+  test('cancels a pending unsubscribe when a key is subscribed again', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+
+    const firstConnection = transport.subscribe('people.1', {
+      message: vi.fn(),
+    });
+
+    firstConnection.unsubscribe();
+    vi.advanceTimersByTime(4_999);
+
+    transport.subscribe('people.1', { message: vi.fn() });
+
+    vi.advanceTimersByTime(1);
+
+    expect(MockWebSocket.instances[0].send).not.toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'unsubscribe',
+        key: 'people.1',
+      })
+    );
+  });
+
   test('sends set_value messages to the socket', () => {
     const transport = new WebSocketTransport('ws://live-model.test', {
       WebSocket: MockWebSocket as unknown as typeof WebSocket,
