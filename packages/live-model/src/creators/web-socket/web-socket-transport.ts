@@ -63,6 +63,7 @@ export class WebSocketTransport {
     let connections = this.subscribersByKey.get(key);
 
     const isFirstConnectionForKey = !connections;
+    const wasPendingUnsubscribe = this.unsubscribeTimeoutsByKey.has(key);
 
     if (!connections) {
       connections = new Set();
@@ -94,7 +95,7 @@ export class WebSocketTransport {
     this.cancelUnsubscribe(key);
     this.connect();
 
-    if (isFirstConnectionForKey) {
+    if (isFirstConnectionForKey && !wasPendingUnsubscribe) {
       this.sendSubscribe(key);
     }
 

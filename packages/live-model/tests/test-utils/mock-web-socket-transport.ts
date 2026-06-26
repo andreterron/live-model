@@ -5,6 +5,7 @@ import type {
 } from '@live-model/protocol';
 import { act } from '@testing-library/react';
 import {
+  LiveRegistry,
   WebSocketLive,
   WebSocketTransport,
   type WebSocketTransportConnection,
@@ -143,11 +144,13 @@ let originalTransport: WebSocketTransport | undefined;
 
 export function mockWebSocketData(data: Record<string, unknown>) {
   originalTransport ??= WebSocketLive.defaultTransport;
+  LiveRegistry.clear();
   WebSocketLive.defaultTransport = new MockWebSocketTransport(data);
 }
 
 export function clearWebSocketData() {
   if (originalTransport) {
+    LiveRegistry.clear();
     WebSocketLive.defaultTransport = originalTransport;
     originalTransport = undefined;
   }

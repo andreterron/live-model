@@ -1,4 +1,4 @@
-import { generateId, useAllKeys, WebSocketLive } from 'live-model';
+import { generateId, LiveRegistry, useAllKeys } from 'live-model';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -52,7 +52,7 @@ export default function ExploreIndexPage() {
   };
 
   const createEntity = (id: string) => {
-    new WebSocketLive<Record<string, never>>(id).setValue({});
+    LiveRegistry.forKey<Record<string, never>>(id).setValue({});
     openEntity(id);
   };
 

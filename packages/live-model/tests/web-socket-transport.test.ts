@@ -135,7 +135,7 @@ describe('WebSocketTransport', () => {
     );
   });
 
-  test('cancels a pending unsubscribe when a key is subscribed again', () => {
+  test('cancels a pending unsubscribe without sending another subscribe for the key', () => {
     const transport = new WebSocketTransport('ws://live-model.test', {
       WebSocket: MockWebSocket as unknown as typeof WebSocket,
     });
@@ -151,6 +151,13 @@ describe('WebSocketTransport', () => {
 
     vi.advanceTimersByTime(1);
 
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledTimes(1);
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'subscribe',
+        key: 'people.1',
+      })
+    );
     expect(MockWebSocket.instances[0].send).not.toHaveBeenCalledWith(
       JSON.stringify({
         type: 'unsubscribe',
