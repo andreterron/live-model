@@ -19,6 +19,7 @@ export * from './model/model.js';
 export type * from './react/hook-types.js';
 export * from './react/use-derived.js';
 export * from './react/use-all-keys.js';
+export * from './react/use-live-model-client.js';
 export * from './react/use-live-state.js';
 export * from './react/use-model.js';
 export * from './react/use-subscribe.js';
@@ -26,6 +27,6 @@ export * from './react/use-subscribe.js';
 // Root
 export * from './value-state.js';
 export * from './live.js';
-export * from './live-registry.js';
+export * from './live-model-client.js';
 export * from './setter.js';
 export * from './deleter.js';

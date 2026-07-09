@@ -1,4 +1,4 @@
-import { generateId, LiveRegistry, useAllKeys } from 'live-model';
+import { generateId, useAllKeys, useLiveModelClient } from 'live-model';
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -26,6 +26,7 @@ export default function ExploreIndexPage() {
   // 2. (no) Everything must have an "edge" from something. Even if it's "user", or "app"
   // TODO: How do we use Live Model in this environment with no schemas/types??
 
+  const client = useLiveModelClient();
   // TODO: This feels like it should be in LiveModel. Maybe as a Live<string[]> itself.
   const keys = useAllKeys();
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export default function ExploreIndexPage() {
   };
 
   const createEntity = (id: string) => {
-    LiveRegistry.forKey<Record<string, never>>(id).setValue({});
+    client.forKey(id).setValue({});
     openEntity(id);
   };
 

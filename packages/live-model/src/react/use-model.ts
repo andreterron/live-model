@@ -1,13 +1,18 @@
 import { useMemo } from 'react';
 import { AnyLiveModelType, LiveModelType, Model } from '../model/model.js';
+import { useLiveModelClient } from './use-live-model-client.js';
 import { useSubscribe } from './use-subscribe.js';
 
 function useModelDefinition<T extends LiveModelType = AnyLiveModelType>(
   modelOrKey: string | Model<T>
 ) {
+  const client = useLiveModelClient();
+
   return useMemo(() => {
     const model =
-      typeof modelOrKey === 'string' ? new Model<T>(modelOrKey) : modelOrKey;
+      typeof modelOrKey === 'string'
+        ? new Model<T>(modelOrKey, client)
+        : modelOrKey;
     return {
       model,
       live: model.selectAll(),
@@ -15,7 +20,7 @@ function useModelDefinition<T extends LiveModelType = AnyLiveModelType>(
       deleteById: model.deleteById.bind(model),
       updateById: (id: string, v: T) => model.selectById(id).setValue(v),
     };
-  }, [modelOrKey]);
+  }, [client, modelOrKey]);
 }
 
 export function useModel<T extends LiveModelType = AnyLiveModelType>(

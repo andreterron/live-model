@@ -1,5 +1,5 @@
-import { LiveRegistry } from '../live-registry.js';
 import { LiveDeleter } from '../deleter.js';
+import { defaultLiveModelClient, LiveModelClient } from '../live-model-client.js';
 import { HACKY_getCurrentLiveValue, Live } from '../live.js';
 import { mapValue } from '../operators/map.js';
 import { LiveSetter } from '../setter.js';
@@ -15,8 +15,11 @@ export interface AnyLiveModelType extends LiveModelType {
 export class Model<T extends LiveModelType = AnyLiveModelType> {
   protected liveList: Live<T[]>;
 
-  constructor(readonly key: string) {
-    this.liveList = LiveRegistry.forKey<T[]>(key);
+  constructor(
+    readonly key: string,
+    protected client: LiveModelClient = defaultLiveModelClient
+  ) {
+    this.liveList = client.forKey<T[]>(key);
   }
 
   selectAll(): Live<T[]> {

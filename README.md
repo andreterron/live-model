@@ -14,16 +14,22 @@ npm i live-model
 
 Here's how you can use Live Model with React:
 
-```
-import { useLiveState } from 'live-model';
+```tsx
+import { configureLiveModel, useLiveState } from 'live-model';
+
+configureLiveModel({
+  websocketUrl: 'ws://localhost:3000/live',
+});
 
 function Counter() {
   const { value, setValue } = useLiveState('key', 0);
 
-  return (<div>
-    <p>Count: {value}</p>
-    <button onClick={() => setValue(value + 1)}>Increment</button>
-  </div>);
+  return (
+    <div>
+      <p>Count: {value}</p>
+      <button onClick={() => setValue(value + 1)}>Increment</button>
+    </div>
+  );
 }
 ```
 

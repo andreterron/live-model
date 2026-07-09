@@ -1,6 +1,6 @@
 import { LiveHookReturn, LiveHookWithDefaultReturn } from './hook-types.js';
 import { useMemo } from 'react';
-import { LiveRegistry } from '../live-registry.js';
+import { useLiveModelClient } from './use-live-model-client.js';
 import { useSubscribe } from './use-subscribe.js';
 
 export interface UseLiveStateOptions {
@@ -28,7 +28,8 @@ export function useLiveState<T = unknown>(
   options?: UseLiveStateOptions
 ): LiveHookReturn<T> {
   // TODO: Use options.initializeWithValue?
-  const live = useMemo(() => LiveRegistry.forKey<T>(key), [key]);
+  const client = useLiveModelClient();
+  const live = useMemo(() => client.forKey<T>(key), [client, key]);
 
   const { value, setValue, deleteValue } = useSubscribe(live);
 

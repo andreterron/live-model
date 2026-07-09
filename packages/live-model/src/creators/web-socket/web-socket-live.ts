@@ -16,22 +16,20 @@ import {
 export interface WebSocketLiveOptions<T> {
   // TODO: Review whether `validator` should be on this Live, or if it should be a Live wrapper
   validator?: ZodType<T, any, any>;
-  transport?: WebSocketTransport;
+  transport: WebSocketTransport;
 }
 
 export class WebSocketLive<T> extends BaseLive<T> {
-  static defaultTransport = new WebSocketTransport('ws://127.0.0.1:3001');
-
   protected state: LiveState<T> = LiveState.loading;
   protected transport: WebSocketTransport;
   protected transportConnection?: WebSocketTransportConnection;
 
   constructor(
     protected key: string,
-    protected options: WebSocketLiveOptions<T> = {}
+    protected options: WebSocketLiveOptions<T>
   ) {
     super();
-    this.transport = options.transport ?? WebSocketLive.defaultTransport;
+    this.transport = options.transport;
   }
 
   override subscribe(subscriber: Subscriber<LiveState<T>>): Subscription {

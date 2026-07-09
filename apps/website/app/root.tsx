@@ -6,10 +6,15 @@ import {
   Scripts,
   ScrollRestoration,
 } from 'react-router';
+import { configureLiveModel } from 'live-model';
 
 import type { Route } from './+types/root';
 import './app.css';
 import { ThemeProvider } from './components/theme-provider';
+
+configureLiveModel({
+  websocketUrl: 'ws://127.0.0.1:3001',
+});
 
 export const links: Route.LinksFunction = () => [];
 
