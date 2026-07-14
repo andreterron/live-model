@@ -34,7 +34,7 @@ export function useLiveState<T = unknown>(
   const { value, setValue, deleteValue } = useSubscribe(live);
 
   return {
-    value: value ?? defaultValue,
+    value: value === undefined ? defaultValue : value,
     setValue,
     deleteValue,
     live,

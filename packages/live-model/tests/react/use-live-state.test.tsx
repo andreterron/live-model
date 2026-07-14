@@ -39,6 +39,13 @@ describe('react useLiveState', () => {
     await waitFor(() => expect(result.current.value).toBe(1));
   });
 
+  test('null is preserved when a default value is provided', async () => {
+    mockWebSocketData({ nullable: null });
+    const { result } = renderHook(() => useLiveState('nullable', 'fallback'));
+
+    await waitFor(() => expect(result.current.value).toBeNull());
+  });
+
   test('websocket lives start as loading before the server state arrives', async () => {
     let { result } = renderHook(() => useLiveState('one'));
 
