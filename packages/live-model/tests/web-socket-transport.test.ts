@@ -181,9 +181,12 @@ describe('WebSocketTransport', () => {
 
     expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
       JSON.stringify({
-        type: 'set_value',
-        key: 'people.1',
-        data: { id: 'people.1' },
+        type: 'op',
+        operation: {
+          type: 'set_value',
+          key: 'people.1',
+          data: { id: 'people.1' },
+        },
       })
     );
   });
@@ -255,8 +258,11 @@ describe('WebSocketTransport', () => {
     MockWebSocket.instances[0].dispatchEvent(
       new MessageEvent('message', {
         data: JSON.stringify({
-          type: 'delete',
-          key: 'people.1',
+          type: 'op',
+          operation: {
+            type: 'delete',
+            key: 'people.1',
+          },
         }),
       })
     );

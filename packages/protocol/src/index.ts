@@ -31,7 +31,7 @@ export const liveStateSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
-export const setValueMessageSchema = z.object({
+export const setValueOperationSchema = z.object({
   type: z.literal('set_value'),
   // TODO: Replace key with targets.
   key: z.string(),
@@ -40,7 +40,7 @@ export const setValueMessageSchema = z.object({
   targets: z.any().optional(),
 });
 
-export const deleteMessageSchema = z.object({
+export const deleteOperationSchema = z.object({
   type: z.literal('delete'),
   // TODO: Replace key with targets.
   key: z.string(),
@@ -73,9 +73,34 @@ export const stateMessageSchema = z.object({
   targets: z.any().optional(),
 });
 
+export const operationStatusMessageSchema = z.discriminatedUnion('status', [
+  z.object({
+    type: z.literal('op_status'),
+    status: z.literal('success'),
+  }),
+  z.object({
+    type: z.literal('op_status'),
+    status: z.literal('error'),
+    error: z.object({
+      code: z.string(),
+      message: z.string().optional(),
+      details: z.any().optional(),
+    }),
+  }),
+]);
+
+export const operationSchema = z.discriminatedUnion('type', [
+  setValueOperationSchema,
+  deleteOperationSchema,
+]);
+
+export const operationMessageSchema = z.object({
+  type: z.literal('op'),
+  operation: operationSchema,
+});
+
 export const protocolMessageSchema = z.discriminatedUnion('type', [
-  setValueMessageSchema,
-  deleteMessageSchema,
+  operationMessageSchema,
   subscribeMessageSchema,
   unsubscribeMessageSchema,
 ]);
@@ -93,41 +118,82 @@ export type LiveStateLike<T = unknown> =
       error?: unknown;
     }>;
 
-export interface Message<T = unknown> {
+export interface Message {
   // clientId: string;
   // clientTimestamp: string;
   type: string;
-  // TODO: Replace `key` with `targets` in the future.
-  key: string;
   // eventId: string;
-  data?: T;
-  // TODO: Define action targets.
-  targets?: any;
   // TODO: Define action dependencies.
   // dependencies: any;
 }
 
-export interface SetValueMessage<T = unknown> extends Message<T> {
+export interface Operation {
+  type: string;
+  key: string;
+  targets?: any;
+}
+
+export interface SetValueOperation<T = unknown> extends Operation {
   type: 'set_value';
   data: T;
 }
 
-export interface DeleteMessage extends Message {
+export interface DeleteOperation extends Operation {
   type: 'delete';
-  data?: never;
 }
+
+export type AnyOperation<T = unknown> =
+  | SetValueOperation<T>
+  | DeleteOperation;
+
+// Zod 3 infers properties using z.any() as optional. The wire format still
+// requires data for set_value, so expose the schema with the protocol type.
+export const operationsSchema = z.array(operationSchema) as z.ZodType<
+  AnyOperation[]
+>;
+
+export interface OperationMessage<T = unknown> extends Message {
+  type: 'op';
+  operation: AnyOperation<T>;
+}
+
+export interface OperationError {
+  code: string;
+  message?: string;
+  details?: unknown;
+}
+
+export type OperationStatusMessage =
+  | (Message & {
+      type: 'op_status';
+      status: 'success';
+    })
+  | (Message & {
+      type: 'op_status';
+      status: 'error';
+      error: OperationError;
+    });
 
 export interface SubscribeMessage extends Message {
   type: 'subscribe';
-  data?: never;
+  key: string;
+  targets?: any;
 }
 
 export interface UnsubscribeMessage extends Message {
   type: 'unsubscribe';
-  data?: never;
+  key: string;
+  targets?: any;
 }
 
-export interface StateMessage<T = unknown> extends Omit<Message<T>, 'data'> {
+export type ProtocolMessage<T = unknown> =
+  | OperationMessage<T>
+  | SubscribeMessage
+  | UnsubscribeMessage;
+
+export interface StateMessage<T = unknown> extends Message {
   type: 'state';
+  key: string;
   state: LiveStateLike<T>;
+  targets?: any;
 }

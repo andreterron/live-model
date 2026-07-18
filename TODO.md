@@ -10,3 +10,13 @@
 - Auto-save
 - Syntax highlighting
 - Dev shortcuts, like "Tab" to indent
+
+# Operations / Messages
+
+- Split "operations" (change data) and "messages" (includes subscriptions, reads, and operations)
+- For either messages or operations, consider sending a result back. Or include metadata linking to the message/operation on the state/message returned
+- Send `OperationStatusMessage` responses through WebSocket. operations need to have IDs for correlation
+
+## Request handler
+
+- Accept JSONL for the right content-type header

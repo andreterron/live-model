@@ -1,16 +1,14 @@
 import {
   allKeysKey,
   type LiveStateLike,
-  type Message as ProtocolMessage,
-  type StateMessage,
+  type AnyOperation,
+  type ProtocolMessage,
   protocolMessageSchema,
 } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
-
-export interface LiveModelWebSocketStore {
-  getLiveState(key: string): LiveStateLike;
-  persistMessage(message: ProtocolMessage): boolean;
-}
+import { executeOperation } from './operations.js';
+import type { StorageAdapter } from './storage-adapter/storage-adapter.js';
+import { getStateMessageForKey } from './live-state.js';
 
 interface LiveModelWebSocketLogger {
   error(...args: unknown[]): void;
@@ -25,23 +23,11 @@ function parseProtocolMessage(text: string): ProtocolMessage | undefined {
     return undefined;
   }
 
-  return result.data;
+  return result.data as ProtocolMessage;
 }
 
-function createStateMessage(key: string, state: LiveStateLike): StateMessage {
-  return {
-    type: 'state',
-    key,
-    state,
-  };
-}
-
-function sendStateMessage(
-  store: LiveModelWebSocketStore,
-  peer: Peer,
-  key: string
-) {
-  peer.send(JSON.stringify(createStateMessage(key, store.getLiveState(key))));
+function sendStateMessage(storage: StorageAdapter, peer: Peer, key: string) {
+  peer.send(JSON.stringify(getStateMessageForKey(key, storage)));
 }
 
 function sendError(peer: Peer, error: string) {
@@ -49,7 +35,7 @@ function sendError(peer: Peer, error: string) {
 }
 
 export function createLiveModelWebSocket(
-  store: LiveModelWebSocketStore,
+  storage: StorageAdapter,
   logger: LiveModelWebSocketLogger = console
 ): WSOptions {
   const peerSubscriptions = new Map<Peer, Set<string>>();
@@ -144,40 +130,34 @@ export function createLiveModelWebSocket(
   }
 
   function getProcessedLiveState(
-    message: ProtocolMessage
+    operation: AnyOperation
   ): LiveStateLike | undefined {
-    if (message.type === 'delete') {
+    if (operation.type === 'delete') {
       return { kind: 'absent', reason: 'deleted' };
     }
 
-    if (message.type === 'set_value') {
-      return {
-        kind: 'value',
-        value: message.data,
-      };
-    }
-
-    return undefined;
+    return {
+      kind: 'value',
+      value: operation.data,
+    };
   }
 
-  function broadcastStateToOtherPeers(sender: Peer, message: ProtocolMessage) {
-    const state = getProcessedLiveState(message);
+  function broadcastStateToOtherPeers(sender: Peer, operation: AnyOperation) {
+    const state = getProcessedLiveState(operation);
 
     if (!state) {
       return;
     }
 
     broadcastToSubscribedPeers(
-      message.key,
-      JSON.stringify(createStateMessage(message.key, state)),
+      operation.key,
+      JSON.stringify({ type: 'state', key: operation.key, state }),
       sender
     );
   }
 
   function broadcastAllKeysState() {
-    const message = JSON.stringify(
-      createStateMessage(allKeysKey, store.getLiveState(allKeysKey))
-    );
+    const message = JSON.stringify(getStateMessageForKey(allKeysKey, storage));
 
     broadcastToSubscribedPeers(allKeysKey, message);
   }
@@ -206,9 +186,11 @@ export function createLiveModelWebSocket(
         return;
       }
 
+      // TODO: clean this up. It should be a switch
+
       if (protocolMessage.type === 'subscribe') {
         subscribePeer(peer, protocolMessage.key);
-        sendStateMessage(store, peer, protocolMessage.key);
+        sendStateMessage(storage, peer, protocolMessage.key);
         return;
       }
 
@@ -217,12 +199,18 @@ export function createLiveModelWebSocket(
         return;
       }
 
-      if (!store.persistMessage(protocolMessage)) {
-        sendError(peer, 'Protocol message must include data');
+      const operation = protocolMessage.operation;
+
+      const status = executeOperation(storage, operation);
+
+      if (status.status === 'error') {
+        sendError(peer, status.error.message ?? status.error.code);
         return;
       }
 
-      broadcastStateToOtherPeers(peer, protocolMessage);
+      broadcastStateToOtherPeers(peer, operation);
+
+      // TODO: Only broadcast all keys if a new key was created or a key was deleted
       broadcastAllKeysState();
     },
 

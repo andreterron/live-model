@@ -1,12 +1,9 @@
 import {
-  deleteMessageSchema,
-  setValueMessageSchema,
+  operationMessageSchema,
   stateMessageSchema,
-  type DeleteMessage,
-  type SetValueMessage,
+  type AnyOperation,
+  type ProtocolMessage,
   type StateMessage,
-  type SubscribeMessage,
-  type UnsubscribeMessage,
 } from '@live-model/protocol';
 import type { Subscription } from '../../reactivity/subscription.js';
 
@@ -23,12 +20,11 @@ export interface WebSocketTransportSubscriber {
 }
 
 export interface WebSocketTransportConnection extends Subscription {
-  send(message: WebSocketTransportWriteMessage): void;
+  send(operation: AnyOperation): void;
 }
 
+// TODO: Receive OperationStatusMessage
 export type WebSocketTransportIncomingMessage = StateMessage;
-
-export type WebSocketTransportWriteMessage = SetValueMessage | DeleteMessage;
 
 type WebSocketTransportConnectionInternal = WebSocketTransportConnection & {
   key: string;
@@ -73,9 +69,9 @@ export class WebSocketTransport {
     const connection: WebSocketTransportConnectionInternal = {
       key,
       subscriber,
-      send: (message) => {
-        this.forwardToSubscribers(connection, message);
-        this.send(message);
+      send: (operation) => {
+        this.forwardToSubscribers(connection, operation);
+        this.send({ type: 'op', operation });
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -102,12 +98,7 @@ export class WebSocketTransport {
     return connection;
   }
 
-  protected send(
-    message:
-      | WebSocketTransportWriteMessage
-      | SubscribeMessage
-      | UnsubscribeMessage
-  ): void {
+  protected send(message: ProtocolMessage): void {
     const serialized = JSON.stringify(message);
     const WebSocketCtor = this.getWebSocketConstructor();
 
@@ -292,14 +283,14 @@ export class WebSocketTransport {
       return stateResult.data as StateMessage;
     }
 
-    return this.parseActionMessageAsState(value);
+    return this.parseOperationMessageAsState(value);
   }
 
   protected forwardToSubscribers(
     sender: WebSocketTransportConnectionInternal,
-    message: WebSocketTransportWriteMessage
+    operation: AnyOperation
   ) {
-    const connections = this.subscribersByKey.get(message.key);
+    const connections = this.subscribersByKey.get(operation.key);
 
     if (!connections) {
       return;
@@ -310,45 +301,37 @@ export class WebSocketTransport {
         continue;
       }
 
-      connection.subscriber.message(this.actionMessageToState(message));
+      connection.subscriber.message(this.operationToState(operation));
     }
   }
 
-  protected parseActionMessageAsState(
+  protected parseOperationMessageAsState(
     value: unknown
   ): StateMessage | undefined {
-    const setValueResult = setValueMessageSchema.safeParse(value);
+    const result = operationMessageSchema.safeParse(value);
 
-    if (setValueResult.success) {
-      return this.actionMessageToState(setValueResult.data as SetValueMessage);
-    }
-
-    const deleteResult = deleteMessageSchema.safeParse(value);
-
-    if (deleteResult.success) {
-      return this.actionMessageToState(deleteResult.data as DeleteMessage);
+    if (result.success) {
+      return this.operationToState(result.data.operation as AnyOperation);
     }
 
     return undefined;
   }
 
-  protected actionMessageToState(
-    message: WebSocketTransportWriteMessage
-  ): StateMessage {
-    if (message.type === 'set_value') {
+  protected operationToState(operation: AnyOperation): StateMessage {
+    if (operation.type === 'set_value') {
       return {
         type: 'state',
-        key: message.key,
+        key: operation.key,
         state: {
           kind: 'value',
-          value: message.data,
+          value: operation.data,
         },
       };
     }
 
     return {
       type: 'state',
-      key: message.key,
+      key: operation.key,
       state: {
         kind: 'absent',
         reason: 'deleted',

@@ -1,9 +1,7 @@
-import { allKeysKey, type Message } from '@live-model/protocol';
+import { allKeysKey, type ProtocolMessage } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer } from 'crossws';
-import {
-  createLiveModelWebSocket,
-  type LiveModelWebSocketStore,
-} from '../src/live-model-websocket.js';
+import { createLiveModelWebSocket } from '../src/websocket-handler.js';
+import type { StorageAdapter } from '../src/storage-adapter/storage-adapter.js';
 
 class TestPeer {
   readonly sent: unknown[] = [];
@@ -23,26 +21,19 @@ function asPeer(peer: TestPeer): Peer {
   return peer as unknown as Peer;
 }
 
-function createMessage(message: Message) {
+function createMessage(message: ProtocolMessage) {
   return {
     text: () => JSON.stringify(message),
   } as WebSocketMessage;
 }
 
-function createStore(
+function createStorage(
   initialValues: Record<string, unknown> = {}
-): LiveModelWebSocketStore {
+): StorageAdapter {
   const values = new Map(Object.entries(initialValues));
 
   return {
-    getLiveState(key) {
-      if (key === allKeysKey) {
-        return {
-          kind: 'value',
-          value: [...values.keys()].sort(),
-        };
-      }
-
+    get(key) {
       if (!values.has(key)) {
         return { kind: 'absent', reason: 'not_found' };
       }
@@ -52,21 +43,15 @@ function createStore(
         value: values.get(key),
       };
     },
-    persistMessage(message) {
-      if (message.key === allKeysKey) {
-        return false;
-      }
-
-      if (message.type === 'delete') {
-        values.delete(message.key);
-        return true;
-      }
-
-      if (message.type !== 'set_value') {
-        return false;
-      }
-
-      values.set(message.key, message.data);
+    listKeys() {
+      return [...values.keys()].sort();
+    },
+    set(key, data) {
+      values.set(key, data);
+      return true;
+    },
+    delete(key) {
+      values.delete(key);
       return true;
     },
   };
@@ -84,7 +69,7 @@ describe('createLiveModelWebSocket', () => {
 
   test('sends a state snapshot for every subscribe from the same peer', () => {
     const websocket = createLiveModelWebSocket(
-      createStore({ foo: { id: 'foo' } }),
+      createStorage({ foo: { id: 'foo' } }),
       logger
     );
     const peer = new TestPeer('peer');
@@ -125,7 +110,7 @@ describe('createLiveModelWebSocket', () => {
   });
 
   test('does not duplicate forwarded updates after duplicate subscribes from the same peer', () => {
-    const websocket = createLiveModelWebSocket(createStore(), logger);
+    const websocket = createLiveModelWebSocket(createStorage(), logger);
     const subscriber = new TestPeer('subscriber');
     const sender = new TestPeer('sender');
 
@@ -146,9 +131,12 @@ describe('createLiveModelWebSocket', () => {
     websocket.message?.(
       asPeer(sender),
       createMessage({
-        type: 'set_value',
-        key: 'foo',
-        data: { id: 'foo' },
+        type: 'op',
+        operation: {
+          type: 'set_value',
+          key: 'foo',
+          data: { id: 'foo' },
+        },
       })
     );
 
@@ -181,7 +169,7 @@ describe('createLiveModelWebSocket', () => {
   });
 
   test('only forwards updates to peers subscribed to the matching key', () => {
-    const websocket = createLiveModelWebSocket(createStore(), logger);
+    const websocket = createLiveModelWebSocket(createStorage(), logger);
     const fooSubscriber = new TestPeer('fooSubscriber');
     const barSubscriber = new TestPeer('barSubscriber');
     const sender = new TestPeer('sender');
@@ -203,9 +191,12 @@ describe('createLiveModelWebSocket', () => {
     websocket.message?.(
       asPeer(sender),
       createMessage({
-        type: 'set_value',
-        key: 'foo',
-        data: { id: 'foo' },
+        type: 'op',
+        operation: {
+          type: 'set_value',
+          key: 'foo',
+          data: { id: 'foo' },
+        },
       })
     );
 

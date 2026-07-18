@@ -1,6 +1,6 @@
 import {
-  type DeleteMessage,
-  type SetValueMessage,
+  type DeleteOperation,
+  type SetValueOperation,
   type StateMessage,
 } from '@live-model/protocol';
 import { type ZodType } from 'zod';
@@ -70,24 +70,24 @@ export class WebSocketLive<T> extends BaseLive<T> {
   }
 
   protected sendSetValue(data: T) {
-    const message: SetValueMessage<T> = {
+    const operation: SetValueOperation<T> = {
       type: 'set_value',
       key: this.key,
       data,
     };
 
     this.activateTransport();
-    this.transportConnection?.send(message);
+    this.transportConnection?.send(operation);
   }
 
   protected sendDelete() {
-    const message: DeleteMessage = {
+    const operation: DeleteOperation = {
       type: 'delete',
       key: this.key,
     };
 
     this.activateTransport();
-    this.transportConnection?.send(message);
+    this.transportConnection?.send(operation);
   }
 
   protected activateTransport() {

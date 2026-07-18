@@ -1,8 +1,4 @@
-import type {
-  DeleteMessage,
-  SetValueMessage,
-  StateMessage,
-} from '@live-model/protocol';
+import type { AnyOperation, StateMessage } from '@live-model/protocol';
 import { act } from '@testing-library/react';
 import {
   configureLiveModel,
@@ -11,7 +7,7 @@ import {
   type WebSocketTransportSubscriber,
 } from '../../src/index.js';
 
-type WriteMessage = SetValueMessage | DeleteMessage;
+type WriteMessage = AnyOperation;
 
 type Connection = WebSocketTransportConnection & {
   key: string;
@@ -46,7 +42,7 @@ class MockWebSocketTransport extends WebSocketTransport {
       subscriber,
       send: (message) => {
         this.applyMessage(message);
-        this.broadcast(this.actionMessageToState(message), connection);
+        this.broadcast(this.operationToState(message), connection);
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -116,7 +112,7 @@ class MockWebSocketTransport extends WebSocketTransport {
     }
   }
 
-  override actionMessageToState(message: WriteMessage): StateMessage {
+  override operationToState(message: WriteMessage): StateMessage {
     if (message.type === 'set_value') {
       return {
         type: 'state',
