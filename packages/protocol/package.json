@@ -1,7 +1,6 @@
 {
   "name": "@live-model/protocol",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.4.6",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

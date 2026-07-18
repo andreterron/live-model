@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import * as path from 'path';
+import { cpSync } from 'node:fs';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -11,8 +12,17 @@ export default defineConfig(() => ({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
     }),
+    {
+      name: 'copy-public-directory',
+      closeBundle() {
+        cpSync(path.join(__dirname, 'public'), path.join(__dirname, 'dist/public'), {
+          recursive: true,
+        });
+      },
+    },
   ],
   clearScreen: false,
+  publicDir: false,
   build: {
     outDir: './dist',
     emptyOutDir: true,
@@ -21,13 +31,19 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
     lib: {
-      entry: 'src/index.ts',
+      entry: {
+        index: 'src/index.ts',
+        server: 'src/server.ts',
+      },
       name: 'api',
-      fileName: 'index',
       formats: ['es' as const],
     },
     rollupOptions: {
       external: (source: string) => !source.match(/\.[tj]sx?$/),
+      output: {
+        banner: (chunk) =>
+          chunk.name === 'server' ? '#!/usr/bin/env node' : '',
+      },
     },
   },
   test: {

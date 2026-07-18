@@ -10,7 +10,8 @@ import { executeOperation } from './operations.js';
 import type { StorageAdapter } from './storage-adapter/storage-adapter.js';
 import { getStateMessageForKey } from './live-state.js';
 
-interface LiveModelWebSocketLogger {
+// TODO: Remove/Replace this type
+export interface LiveModelWebSocketLogger {
   error(...args: unknown[]): void;
   log(...args: unknown[]): void;
 }
