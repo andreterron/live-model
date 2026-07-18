@@ -32,9 +32,7 @@
   },
   "dependencies": {
     "@live-model/protocol": "workspace:*",
-    "crossws": "^0.4.6"
-  },
-  "optionalDependencies": {
+    "crossws": "^0.4.6",
     "srvx": "^0.11.5"
   },
   "devDependencies": {

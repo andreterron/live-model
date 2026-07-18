@@ -6,6 +6,8 @@ import { createLiveModelWebSocket } from './websocket-handler.js';
 import { createOperationsHandler } from './operations-request-handler.js';
 import { SQLiteStorageAdapter } from './storage-adapter/sqlite-storage-adapter.js';
 
+// TODO: Move this ready-to-run server into a separate package so consumers of
+// the API-building utilities do not need its server and static-file dependencies.
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 const hostname = process.env.HOST ?? '127.0.0.1';
 const databasePath = process.env.LIVE_MODEL_DB_PATH ?? 'live-model.sqlite';
