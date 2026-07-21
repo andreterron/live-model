@@ -20,7 +20,3 @@
 ## Request handler
 
 - Accept JSONL for the right content-type header
-
-# API packaging
-
-- Move the ready-to-run default server into a separate package so `@live-model/api` can focus on API-building utilities without carrying the server and static-file dependencies

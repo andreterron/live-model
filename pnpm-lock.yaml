@@ -249,16 +249,10 @@ importers:
       crossws:
         specifier: ^0.4.6
         version: 0.4.6(srvx@0.11.16)
-      srvx:
-        specifier: ^0.11.5
-        version: 0.11.16
     devDependencies:
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
-      tsx:
-        specifier: ^4.22.4
-        version: 4.22.4
       typescript:
         specifier: ^5.7.2
         version: 5.7.3
@@ -370,6 +364,34 @@ importers:
         specifier: ^3.24.3
         version: 3.24.3
     devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0)
+      vite-plugin-dts:
+        specifier: ~5.0.2
+        version: 5.0.2(@microsoft/api-extractor@7.52.2(@types/node@25.9.3))(@rspack/core@1.6.8(@swc/helpers@0.5.23))(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.62.0)(typescript@5.7.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))(webpack@5.107.2(@swc/core@1.15.41(@swc/helpers@0.5.23))(esbuild@0.28.1)(postcss@8.4.38))
+
+  packages/server:
+    dependencies:
+      '@live-model/api':
+        specifier: workspace:*
+        version: link:../api
+      crossws:
+        specifier: ^0.4.6
+        version: 0.4.6(srvx@0.11.16)
+      srvx:
+        specifier: ^0.11.5
+        version: 0.11.16
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.3
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: ^5.7.2
         version: 5.7.3

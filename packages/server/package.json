@@ -1,9 +1,12 @@
 {
-  "name": "@live-model/api",
+  "name": "@live-model/server",
   "version": "0.4.6",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "live-model-server": "./dist/index.js"
+  },
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -12,23 +15,29 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "build": "vite build",
-    "test": "vitest",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "start": "node dist/index.js",
     "typecheck": "tsc --build tsconfig.lib.json"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
-    "@live-model/protocol": "workspace:*",
-    "crossws": "^0.4.6"
+    "@live-model/api": "workspace:*",
+    "crossws": "^0.4.6",
+    "srvx": "^0.11.5"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
     "typescript": "^5.7.2",
     "vite": "^8.0.16",
-    "vite-plugin-dts": "~5.0.2",
-    "vitest": "^4.1.8"
+    "vite-plugin-dts": "~5.0.2"
   }
 }
