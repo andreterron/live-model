@@ -12,8 +12,21 @@ import type { Route } from './+types/root';
 import './app.css';
 import { ThemeProvider } from './components/theme-provider';
 
+const websocketUrl =
+  typeof window === 'undefined'
+    ? 'ws://127.0.0.1:3001/'
+    : (() => {
+        const url = new URL(window.location.href);
+        url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+        if (url.port) url.port = '3001';
+        url.pathname = '/';
+        url.search = '';
+        url.hash = '';
+        return url;
+      })();
+
 configureLiveModel({
-  websocketUrl: 'ws://127.0.0.1:3001',
+  websocketUrl,
 });
 
 export const links: Route.LinksFunction = () => [];

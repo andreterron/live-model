@@ -14,7 +14,6 @@
     "jsx": "react-jsx",
     "rootDirs": [".", "./.react-router/types"],
     "paths": {
-      "live-model": ["../../packages/live-model/src/index.ts"],
       "~/*": ["./app/*"]
     },
     "esModuleInterop": true,
@@ -25,6 +24,9 @@
     "strict": true
   },
   "references": [
+    {
+      "path": "../../packages/explorer"
+    },
     {
       "path": "../../packages/live-model"
     }

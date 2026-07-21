@@ -1,9 +1,9 @@
-import { Outlet } from 'react-router';
+import '@live-model/explorer/styles.css';
 
-export default function ExploreLayout() {
-  return (
-    <div className="min-h-screen p-8">
-      <Outlet />
-    </div>
-  );
-}
+// Thin local route adapter for @live-model/explorer.
+export {
+  explorerClientLoader as clientLoader,
+  ExplorerHydrateFallback as HydrateFallback,
+  ExplorerLayoutRoute as default,
+  meta,
+} from '@live-model/explorer';
