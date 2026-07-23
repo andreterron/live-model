@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@live-model/protocol": "workspace:*",
-    "crossws": "^0.4.6"
+    "crossws": "^0.4.6",
+    "live-model": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",

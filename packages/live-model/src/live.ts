@@ -1,12 +1,20 @@
+import type {
+  AbsentReason,
+  AnyOperation,
+  LiveState,
+  OperationResult,
+} from '@live-model/protocol';
 import { Subscriber } from './reactivity/subscriber.js';
 import { Subscription } from './reactivity/subscription.js';
-import { LiveState, AbsentReason } from './value-state.js';
 
 export interface Live<T> {
   get(): LiveState<T>;
   subscribe(subscriber: Subscriber<LiveState<T>>): Subscription;
 
   // Actions
+
+  // TODO: `op()` can't always synchronously return a result
+  op(operation: AnyOperation<T>): OperationResult;
   setValue(value: T): void;
   deleteValue(): void;
 }
@@ -35,6 +43,16 @@ export abstract class BaseLive<T> implements Live<T> {
   protected notifyLiveState(liveState: LiveState<T>) {
     // TODO: liveState shouldn't be mutable. Either create copies or make it readonly
     this.subscribers.forEach((s) => s.next(liveState));
+  }
+
+  op(operation: AnyOperation<T>): OperationResult {
+    if (operation.type === 'delete') {
+      this.deleteValue();
+    } else {
+      this.setValue(operation.data);
+    }
+
+    return { status: 'success' };
   }
 
   abstract get(): LiveState<T>;

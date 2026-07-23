@@ -1,4 +1,5 @@
 import {
+  LiveState,
   type DeleteOperation,
   type SetValueOperation,
   type StateMessage,
@@ -7,7 +8,6 @@ import { type ZodType } from 'zod';
 import { BaseLive } from '../../live.js';
 import { Subscriber } from '../../reactivity/subscriber.js';
 import { Subscription } from '../../reactivity/subscription.js';
-import { LiveState } from '../../value-state.js';
 import {
   WebSocketTransport,
   type WebSocketTransportConnection,
@@ -72,7 +72,6 @@ export class WebSocketLive<T> extends BaseLive<T> {
   protected sendSetValue(data: T) {
     const operation: SetValueOperation<T> = {
       type: 'set_value',
-      key: this.key,
       data,
     };
 
@@ -83,7 +82,6 @@ export class WebSocketLive<T> extends BaseLive<T> {
   protected sendDelete() {
     const operation: DeleteOperation = {
       type: 'delete',
-      key: this.key,
     };
 
     this.activateTransport();

@@ -70,8 +70,8 @@ export class WebSocketTransport {
       key,
       subscriber,
       send: (operation) => {
-        this.forwardToSubscribers(connection, operation);
-        this.send({ type: 'op', operation });
+        this.forwardToSubscribers(connection, key, operation);
+        this.send({ type: 'op', key, operation });
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -288,9 +288,10 @@ export class WebSocketTransport {
 
   protected forwardToSubscribers(
     sender: WebSocketTransportConnectionInternal,
+    key: string,
     operation: AnyOperation
   ) {
-    const connections = this.subscribersByKey.get(operation.key);
+    const connections = this.subscribersByKey.get(key);
 
     if (!connections) {
       return;
@@ -301,7 +302,7 @@ export class WebSocketTransport {
         continue;
       }
 
-      connection.subscriber.message(this.operationToState(operation));
+      connection.subscriber.message(this.operationToState(key, operation));
     }
   }
 
@@ -311,17 +312,23 @@ export class WebSocketTransport {
     const result = operationMessageSchema.safeParse(value);
 
     if (result.success) {
-      return this.operationToState(result.data.operation as AnyOperation);
+      return this.operationToState(
+        result.data.key,
+        result.data.operation as AnyOperation
+      );
     }
 
     return undefined;
   }
 
-  protected operationToState(operation: AnyOperation): StateMessage {
+  protected operationToState(
+    key: string,
+    operation: AnyOperation
+  ): StateMessage {
     if (operation.type === 'set_value') {
       return {
         type: 'state',
-        key: operation.key,
+        key,
         state: {
           kind: 'value',
           value: operation.data,
@@ -331,7 +338,7 @@ export class WebSocketTransport {
 
     return {
       type: 'state',
-      key: operation.key,
+      key,
       state: {
         kind: 'absent',
         reason: 'deleted',

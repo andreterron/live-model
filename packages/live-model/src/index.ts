@@ -1,6 +1,9 @@
+export * from '@live-model/protocol';
+
 // Creators
 export * from './creators/settable-memory.js';
 export * from './creators/local-storage-live.js';
+export * from './creators/storage-live.js';
 export * from './creators/web-socket/web-socket-transport.js';
 export * from './creators/web-socket/web-socket-live.js';
 
@@ -25,8 +28,8 @@ export * from './react/use-model.js';
 export * from './react/use-subscribe.js';
 
 // Root
-export * from './value-state.js';
 export * from './live.js';
+export * from './backend-live-model.js';
 export * from './live-model-client.js';
 export * from './setter.js';
 export * from './deleter.js';

@@ -175,16 +175,15 @@ describe('WebSocketTransport', () => {
 
     connection.send({
       type: 'set_value',
-      key: 'people.1',
       data: { id: 'people.1' },
     });
 
     expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
       JSON.stringify({
         type: 'op',
+        key: 'people.1',
         operation: {
           type: 'set_value',
-          key: 'people.1',
           data: { id: 'people.1' },
         },
       })
@@ -232,7 +231,6 @@ describe('WebSocketTransport', () => {
 
     connection.send({
       type: 'set_value',
-      key: 'people.1',
       data: { id: 'people.1' },
     });
 
@@ -259,9 +257,9 @@ describe('WebSocketTransport', () => {
       new MessageEvent('message', {
         data: JSON.stringify({
           type: 'op',
+          key: 'people.1',
           operation: {
             type: 'delete',
-            key: 'people.1',
           },
         }),
       })

@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react';
+import type { LiveState } from '@live-model/protocol';
 import { Live } from '../live.js';
 import { LiveHookReturn } from './hook-types.js';
 import { LiveSetter } from '../setter.js';
 import { mapState, valueTransform } from '../operators/map.js';
 import { LiveDeleter } from '../deleter.js';
-import { LiveState } from '../value-state.js';
 import { useSubscribe } from './use-subscribe.js';
 
 /**

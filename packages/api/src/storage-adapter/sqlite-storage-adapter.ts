@@ -1,6 +1,5 @@
-import type { LiveStateLike } from '@live-model/protocol';
+import type { LiveState, StorageAdapter } from 'live-model';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import type { StorageAdapter } from './storage-adapter.js';
 
 export class SQLiteStorageAdapter implements StorageAdapter {
   private readonly database: DatabaseSync;
@@ -37,7 +36,7 @@ export class SQLiteStorageAdapter implements StorageAdapter {
     );
   }
 
-  get(key: string): LiveStateLike {
+  get(key: string): LiveState<unknown> {
     const row = this.selectEntity.get(key);
 
     if (!row) {

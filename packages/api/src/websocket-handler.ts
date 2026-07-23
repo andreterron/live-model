@@ -1,14 +1,10 @@
 import {
-  allKeysKey,
-  type LiveStateLike,
-  type AnyOperation,
+  type OperationStatusMessage,
   type ProtocolMessage,
   protocolMessageSchema,
 } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
-import { executeOperation } from './operations.js';
-import type { StorageAdapter } from './storage-adapter/storage-adapter.js';
-import { getStateMessageForKey } from './live-state.js';
+import type { BackendLiveModel, Subscription } from 'live-model';
 
 // TODO: Remove/Replace this type
 export interface LiveModelWebSocketLogger {
@@ -20,15 +16,7 @@ function parseProtocolMessage(text: string): ProtocolMessage | undefined {
   const parsed: unknown = JSON.parse(text);
   const result = protocolMessageSchema.safeParse(parsed);
 
-  if (!result.success) {
-    return undefined;
-  }
-
-  return result.data as ProtocolMessage;
-}
-
-function sendStateMessage(storage: StorageAdapter, peer: Peer, key: string) {
-  peer.send(JSON.stringify(getStateMessageForKey(key, storage)));
+  return result.success ? (result.data as ProtocolMessage) : undefined;
 }
 
 function sendError(peer: Peer, error: string) {
@@ -36,53 +24,56 @@ function sendError(peer: Peer, error: string) {
 }
 
 export function createLiveModelWebSocket(
-  storage: StorageAdapter,
+  liveModel: BackendLiveModel,
   logger: LiveModelWebSocketLogger = console
 ): WSOptions {
-  const peerSubscriptions = new Map<Peer, Set<string>>();
-  const subscribedPeersByKey = new Map<string, Set<Peer>>();
+  const peerSubscriptions = new Map<Peer, Map<string, Subscription>>();
+  // TODO: Remove/refactor this synchronous suppression mechanism. Operations
+  // should carry origin and operation IDs, and resulting state messages should
+  // reference the operation so transports or clients can reconcile safely.
+  let suppressedNotification: { peer: Peer; key: string } | undefined;
+
+  function sendState(peer: Peer, key: string) {
+    peer.send(
+      JSON.stringify({ type: 'state', key, state: liveModel.forKey(key).get() })
+    );
+  }
 
   function subscribePeer(peer: Peer, key: string) {
     let subscriptions = peerSubscriptions.get(peer);
 
     if (!subscriptions) {
-      subscriptions = new Set();
+      subscriptions = new Map();
       peerSubscriptions.set(peer, subscriptions);
     }
 
-    subscriptions.add(key);
-
-    let subscribedPeers = subscribedPeersByKey.get(key);
-
-    if (!subscribedPeers) {
-      subscribedPeers = new Set();
-      subscribedPeersByKey.set(key, subscribedPeers);
+    if (subscriptions.has(key)) {
+      sendState(peer, key);
+      return;
     }
 
-    subscribedPeers.add(peer);
+    const subscription = liveModel.forKey(key).subscribe({
+      next(state) {
+        if (
+          suppressedNotification?.peer === peer &&
+          suppressedNotification.key === key
+        ) {
+          return;
+        }
+
+        peer.send(JSON.stringify({ type: 'state', key, state }));
+      },
+    });
+    subscriptions.set(key, subscription);
   }
 
   function unsubscribePeer(peer: Peer, key: string) {
     const subscriptions = peerSubscriptions.get(peer);
+    subscriptions?.get(key)?.unsubscribe();
+    subscriptions?.delete(key);
 
-    if (subscriptions) {
-      subscriptions.delete(key);
-
-      if (subscriptions.size === 0) {
-        peerSubscriptions.delete(peer);
-      }
-    }
-
-    const subscribedPeers = subscribedPeersByKey.get(key);
-
-    if (!subscribedPeers) {
-      return;
-    }
-
-    subscribedPeers.delete(peer);
-
-    if (subscribedPeers.size === 0) {
-      subscribedPeersByKey.delete(key);
+    if (subscriptions?.size === 0) {
+      peerSubscriptions.delete(peer);
     }
   }
 
@@ -93,74 +84,11 @@ export function createLiveModelWebSocket(
       return;
     }
 
-    for (const key of subscriptions) {
-      const subscribedPeers = subscribedPeersByKey.get(key);
-
-      if (!subscribedPeers) {
-        continue;
-      }
-
-      subscribedPeers.delete(peer);
-
-      if (subscribedPeers.size === 0) {
-        subscribedPeersByKey.delete(key);
-      }
+    for (const subscription of subscriptions.values()) {
+      subscription.unsubscribe();
     }
 
     peerSubscriptions.delete(peer);
-  }
-
-  function broadcastToSubscribedPeers(
-    key: string,
-    messageText: string,
-    sender?: Peer
-  ) {
-    const subscribedPeers = subscribedPeersByKey.get(key);
-
-    if (!subscribedPeers) {
-      return;
-    }
-
-    for (const peer of subscribedPeers) {
-      if (peer === sender) {
-        continue;
-      }
-
-      peer.send(messageText);
-    }
-  }
-
-  function getProcessedLiveState(
-    operation: AnyOperation
-  ): LiveStateLike | undefined {
-    if (operation.type === 'delete') {
-      return { kind: 'absent', reason: 'deleted' };
-    }
-
-    return {
-      kind: 'value',
-      value: operation.data,
-    };
-  }
-
-  function broadcastStateToOtherPeers(sender: Peer, operation: AnyOperation) {
-    const state = getProcessedLiveState(operation);
-
-    if (!state) {
-      return;
-    }
-
-    broadcastToSubscribedPeers(
-      operation.key,
-      JSON.stringify({ type: 'state', key: operation.key, state }),
-      sender
-    );
-  }
-
-  function broadcastAllKeysState() {
-    const message = JSON.stringify(getStateMessageForKey(allKeysKey, storage));
-
-    broadcastToSubscribedPeers(allKeysKey, message);
   }
 
   return {
@@ -187,11 +115,8 @@ export function createLiveModelWebSocket(
         return;
       }
 
-      // TODO: clean this up. It should be a switch
-
       if (protocolMessage.type === 'subscribe') {
         subscribePeer(peer, protocolMessage.key);
-        sendStateMessage(storage, peer, protocolMessage.key);
         return;
       }
 
@@ -200,19 +125,23 @@ export function createLiveModelWebSocket(
         return;
       }
 
-      const operation = protocolMessage.operation;
-
-      const status = executeOperation(storage, operation);
+      suppressedNotification = {
+        peer,
+        key: protocolMessage.key,
+      };
+      let status: OperationStatusMessage;
+      try {
+        status = liveModel.processOperation(
+          protocolMessage.key,
+          protocolMessage.operation
+        );
+      } finally {
+        suppressedNotification = undefined;
+      }
 
       if (status.status === 'error') {
         sendError(peer, status.error.message ?? status.error.code);
-        return;
       }
-
-      broadcastStateToOtherPeers(peer, operation);
-
-      // TODO: Only broadcast all keys if a new key was created or a key was deleted
-      broadcastAllKeysState();
     },
 
     close(peer: Peer, event: unknown) {

@@ -2,6 +2,58 @@ import { z } from 'zod';
 
 export const allKeysKey = '_livemodel.all_keys';
 
+export type AbsentReason =
+  | 'not_found'
+  | 'deleted'
+  | 'unauthorized'
+  | 'offline'
+  | 'error';
+
+export type LiveStateLoading = Readonly<{ kind: 'loading' }>;
+export type LiveStateAbsent = Readonly<{
+  kind: 'absent';
+  reason?: AbsentReason;
+  error?: unknown;
+}>;
+export type LiveStateValue<T> = Readonly<{
+  kind: 'value';
+  value: T;
+  error?: unknown;
+}>;
+
+export type LiveState<T> =
+  | LiveStateLoading
+  | LiveStateAbsent
+  | LiveStateValue<T>;
+
+const cachedAbsentStates: Readonly<{
+  [key in Exclude<AbsentReason, 'error'> | '_']: LiveStateAbsent;
+}> = Object.freeze({
+  not_found: { kind: 'absent', reason: 'not_found' },
+  deleted: { kind: 'absent', reason: 'deleted' },
+  unauthorized: { kind: 'absent', reason: 'unauthorized' },
+  offline: { kind: 'absent', reason: 'offline' },
+  _: { kind: 'absent' },
+});
+
+export const LiveState = Object.freeze({
+  loading: Object.freeze({ kind: 'loading' }) as LiveStateLoading,
+  value<T>(value: T): LiveStateValue<T> {
+    return Object.freeze({ kind: 'value', value });
+  },
+  absent(reason?: AbsentReason, error?: unknown): LiveStateAbsent {
+    if (!reason) {
+      return cachedAbsentStates['_'];
+    }
+
+    if (reason !== 'error') {
+      return cachedAbsentStates[reason];
+    }
+
+    return Object.freeze({ kind: 'absent', reason, error });
+  },
+});
+
 // TODO: The zod schemas and interfaces aren't linked. Parsing with the
 // schema should yield the right types. Tricky because of generics.
 // Maybe remove generics from Messages
@@ -33,19 +85,11 @@ export const liveStateSchema = z.discriminatedUnion('kind', [
 
 export const setValueOperationSchema = z.object({
   type: z.literal('set_value'),
-  // TODO: Replace key with targets.
-  key: z.string(),
   data: z.any(),
-  // TODO: Define action targets.
-  targets: z.any().optional(),
 });
 
 export const deleteOperationSchema = z.object({
   type: z.literal('delete'),
-  // TODO: Replace key with targets.
-  key: z.string(),
-  // TODO: Define action targets.
-  targets: z.any().optional(),
 });
 
 export const subscribeMessageSchema = z.object({
@@ -96,6 +140,7 @@ export const operationSchema = z.discriminatedUnion('type', [
 
 export const operationMessageSchema = z.object({
   type: z.literal('op'),
+  key: z.string(),
   operation: operationSchema,
 });
 
@@ -104,19 +149,6 @@ export const protocolMessageSchema = z.discriminatedUnion('type', [
   subscribeMessageSchema,
   unsubscribeMessageSchema,
 ]);
-
-export type LiveStateLike<T = unknown> =
-  | Readonly<{ kind: 'loading' }>
-  | Readonly<{
-      kind: 'absent';
-      reason?: 'not_found' | 'deleted' | 'unauthorized' | 'offline' | 'error';
-      error?: unknown;
-    }>
-  | Readonly<{
-      kind: 'value';
-      value: T;
-      error?: unknown;
-    }>;
 
 export interface Message {
   // clientId: string;
@@ -129,8 +161,6 @@ export interface Message {
 
 export interface Operation {
   type: string;
-  key: string;
-  targets?: any;
 }
 
 export interface SetValueOperation<T = unknown> extends Operation {
@@ -142,9 +172,7 @@ export interface DeleteOperation extends Operation {
   type: 'delete';
 }
 
-export type AnyOperation<T = unknown> =
-  | SetValueOperation<T>
-  | DeleteOperation;
+export type AnyOperation<T = unknown> = SetValueOperation<T> | DeleteOperation;
 
 // Zod 3 infers properties using z.any() as optional. The wire format still
 // requires data for set_value, so expose the schema with the protocol type.
@@ -152,8 +180,13 @@ export const operationsSchema = z.array(operationSchema) as z.ZodType<
   AnyOperation[]
 >;
 
+export const operationMessagesSchema = z.array(
+  operationMessageSchema
+) as z.ZodType<OperationMessage[]>;
+
 export interface OperationMessage<T = unknown> extends Message {
   type: 'op';
+  key: string;
   operation: AnyOperation<T>;
 }
 
@@ -163,16 +196,13 @@ export interface OperationError {
   details?: unknown;
 }
 
-export type OperationStatusMessage =
-  | (Message & {
-      type: 'op_status';
-      status: 'success';
-    })
-  | (Message & {
-      type: 'op_status';
-      status: 'error';
-      error: OperationError;
-    });
+export type OperationResult =
+  | { status: 'success' }
+  | { status: 'error'; error: OperationError };
+
+export type OperationStatusMessage = Message & {
+  type: 'op_status';
+} & OperationResult;
 
 export interface SubscribeMessage extends Message {
   type: 'subscribe';
@@ -194,6 +224,6 @@ export type ProtocolMessage<T = unknown> =
 export interface StateMessage<T = unknown> extends Message {
   type: 'state';
   key: string;
-  state: LiveStateLike<T>;
+  state: LiveState<T>;
   targets?: any;
 }

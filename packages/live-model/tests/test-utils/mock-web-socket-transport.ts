@@ -41,8 +41,8 @@ class MockWebSocketTransport extends WebSocketTransport {
       key,
       subscriber,
       send: (message) => {
-        this.applyMessage(message);
-        this.broadcast(this.operationToState(message), connection);
+        this.applyMessage(key, message);
+        this.broadcast(this.operationToState(key, message), connection);
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -81,13 +81,13 @@ class MockWebSocketTransport extends WebSocketTransport {
     return connection;
   }
 
-  private applyMessage(message: WriteMessage) {
+  private applyMessage(key: string, message: WriteMessage) {
     if (message.type === 'set_value') {
-      this.values.set(message.key, message.data);
+      this.values.set(key, message.data);
       return;
     }
 
-    this.values.delete(message.key);
+    this.values.delete(key);
   }
 
   private broadcast(message: StateMessage, sender: Connection) {
@@ -112,11 +112,14 @@ class MockWebSocketTransport extends WebSocketTransport {
     }
   }
 
-  override operationToState(message: WriteMessage): StateMessage {
+  override operationToState(
+    key: string,
+    message: WriteMessage
+  ): StateMessage {
     if (message.type === 'set_value') {
       return {
         type: 'state',
-        key: message.key,
+        key,
         state: {
           kind: 'value',
           value: message.data,
@@ -126,7 +129,7 @@ class MockWebSocketTransport extends WebSocketTransport {
 
     return {
       type: 'state',
-      key: message.key,
+      key,
       state: {
         kind: 'absent',
         reason: 'deleted',

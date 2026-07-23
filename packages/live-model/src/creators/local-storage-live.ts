@@ -1,6 +1,6 @@
 import type { ZodType } from 'zod';
+import { LiveState } from '@live-model/protocol';
 import { BaseLive } from '../live.js';
-import { LiveState } from '../value-state.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';
 

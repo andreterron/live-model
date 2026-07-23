@@ -1,8 +1,7 @@
-import { operationsSchema } from '@live-model/protocol';
-import { executeOperation } from './operations.js';
-import type { StorageAdapter } from './storage-adapter/storage-adapter.js';
+import { operationMessagesSchema } from '@live-model/protocol';
+import type { BackendLiveModel } from 'live-model';
 
-export function createOperationsHandler(storage: StorageAdapter) {
+export function createOperationsHandler(liveModel: BackendLiveModel) {
   return async function handleOperations(request: Request): Promise<Response> {
     let body: unknown;
 
@@ -12,18 +11,20 @@ export function createOperationsHandler(storage: StorageAdapter) {
       return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = operationsSchema.safeParse(body);
+    const parsed = operationMessagesSchema.safeParse(body);
 
     // TODO: Use zod error for error message
     if (!parsed.success) {
       return Response.json(
-        { error: 'Body must be an array of valid protocol operations' },
+        { error: 'Body must be an array of valid protocol operation messages' },
         { status: 400 }
       );
     }
 
     return Response.json(
-      parsed.data.map((operation) => executeOperation(storage, operation))
+      parsed.data.map(({ key, operation }) =>
+        liveModel.processOperation(key, operation)
+      )
     );
   };
 }

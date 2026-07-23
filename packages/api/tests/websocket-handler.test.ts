@@ -1,7 +1,8 @@
-import { allKeysKey, type ProtocolMessage } from '@live-model/protocol';
+import type { ProtocolMessage } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer } from 'crossws';
+import { BackendLiveModel } from 'live-model';
+import type { StorageAdapter } from 'live-model';
 import { createLiveModelWebSocket } from '../src/websocket-handler.js';
-import type { StorageAdapter } from '../src/storage-adapter/storage-adapter.js';
 
 class TestPeer {
   readonly sent: unknown[] = [];
@@ -69,7 +70,7 @@ describe('createLiveModelWebSocket', () => {
 
   test('sends a state snapshot for every subscribe from the same peer', () => {
     const websocket = createLiveModelWebSocket(
-      createStorage({ foo: { id: 'foo' } }),
+      new BackendLiveModel(createStorage({ foo: { id: 'foo' } })),
       logger
     );
     const peer = new TestPeer('peer');
@@ -110,7 +111,10 @@ describe('createLiveModelWebSocket', () => {
   });
 
   test('does not duplicate forwarded updates after duplicate subscribes from the same peer', () => {
-    const websocket = createLiveModelWebSocket(createStorage(), logger);
+    const websocket = createLiveModelWebSocket(
+      new BackendLiveModel(createStorage()),
+      logger
+    );
     const subscriber = new TestPeer('subscriber');
     const sender = new TestPeer('sender');
 
@@ -132,9 +136,9 @@ describe('createLiveModelWebSocket', () => {
       asPeer(sender),
       createMessage({
         type: 'op',
+        key: 'foo',
         operation: {
           type: 'set_value',
-          key: 'foo',
           data: { id: 'foo' },
         },
       })
@@ -169,7 +173,10 @@ describe('createLiveModelWebSocket', () => {
   });
 
   test('only forwards updates to peers subscribed to the matching key', () => {
-    const websocket = createLiveModelWebSocket(createStorage(), logger);
+    const websocket = createLiveModelWebSocket(
+      new BackendLiveModel(createStorage()),
+      logger
+    );
     const fooSubscriber = new TestPeer('fooSubscriber');
     const barSubscriber = new TestPeer('barSubscriber');
     const sender = new TestPeer('sender');
@@ -192,9 +199,9 @@ describe('createLiveModelWebSocket', () => {
       asPeer(sender),
       createMessage({
         type: 'op',
+        key: 'foo',
         operation: {
           type: 'set_value',
-          key: 'foo',
           data: { id: 'foo' },
         },
       })
@@ -219,5 +226,23 @@ describe('createLiveModelWebSocket', () => {
         },
       },
     ]);
+  });
+
+  test('forwards mutations made directly through a backend Live', () => {
+    const liveModel = new BackendLiveModel(createStorage());
+    const websocket = createLiveModelWebSocket(liveModel, logger);
+    const subscriber = new TestPeer('subscriber');
+
+    websocket.message?.(
+      asPeer(subscriber),
+      createMessage({ type: 'subscribe', key: 'foo' })
+    );
+    liveModel.forKey('foo').setValue({ id: 'from-backend' });
+
+    expect(subscriber.sent[1]).toEqual({
+      type: 'state',
+      key: 'foo',
+      state: { kind: 'value', value: { id: 'from-backend' } },
+    });
   });
 });

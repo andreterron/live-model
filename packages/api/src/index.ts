@@ -1,4 +1,3 @@
-export * from './storage-adapter/storage-adapter.js';
 export * from './storage-adapter/sqlite-storage-adapter.js';
 
 export * from './websocket-handler.js';

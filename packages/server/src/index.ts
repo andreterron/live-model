@@ -7,6 +7,7 @@ import {
   createOperationsHandler,
   SQLiteStorageAdapter,
 } from '@live-model/api';
+import { BackendLiveModel } from 'live-model';
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 const hostname = process.env.HOST ?? '127.0.0.1';
@@ -19,15 +20,16 @@ const publicDir = existsSync(builtPublicDir)
   : fileURLToPath(new URL(/* @vite-ignore */ '../public', import.meta.url));
 
 const storage = new SQLiteStorageAdapter(databasePath);
+const liveModel = new BackendLiveModel(storage);
 
-const handleOperations = createOperationsHandler(storage);
+const handleOperations = createOperationsHandler(liveModel);
 
 const server = serve({
   middleware: [serveStatic({ dir: publicDir })],
   manual: true,
   hostname,
   port,
-  websocket: createLiveModelWebSocket(storage),
+  websocket: createLiveModelWebSocket(liveModel),
   fetch: (request) => {
     const url = new URL(request.url);
 

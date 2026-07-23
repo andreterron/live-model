@@ -1,6 +1,7 @@
 import { allKeysKey } from '@live-model/protocol';
+import { BackendLiveModel } from 'live-model';
+import type { StorageAdapter } from 'live-model';
 import { createOperationsHandler } from '../src/operations-request-handler.js';
-import type { StorageAdapter } from '../src/storage-adapter/storage-adapter.js';
 
 function createStorage(initialValues: Record<string, unknown> = {}) {
   const values = new Map(Object.entries(initialValues));
@@ -27,15 +28,25 @@ function createStorage(initialValues: Record<string, unknown> = {}) {
 
 describe('createOperationsHandler', () => {
   test('processes operations in order and returns a result for each one', async () => {
-    const handler = createOperationsHandler(createStorage());
+    const handler = createOperationsHandler(
+      new BackendLiveModel(createStorage())
+    );
     const response = await handler(
       new Request('http://localhost/operations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify([
-          { type: 'set_value', key: 'foo', data: { count: 1 } },
-          { type: 'delete', key: 'foo' },
-          { type: 'delete', key: allKeysKey },
+          {
+            type: 'op',
+            key: 'foo',
+            operation: { type: 'set_value', data: { count: 1 } },
+          },
+          { type: 'op', key: 'foo', operation: { type: 'delete' } },
+          {
+            type: 'op',
+            key: allKeysKey,
+            operation: { type: 'delete' },
+          },
         ]),
       })
     );
@@ -55,14 +66,16 @@ describe('createOperationsHandler', () => {
         status: 'error',
         error: {
           code: 'operation_failed',
-          message: 'Operation could not be persisted',
+          message: `The reserved key "${allKeysKey}" is read-only`,
         },
       },
     ]);
   });
 
   test('rejects invalid JSON and non-operation arrays', async () => {
-    const handler = createOperationsHandler(createStorage());
+    const handler = createOperationsHandler(
+      new BackendLiveModel(createStorage())
+    );
     const invalidJson = await handler(
       new Request('http://localhost/operations', {
         method: 'POST',

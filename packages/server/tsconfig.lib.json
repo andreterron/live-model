@@ -12,6 +12,13 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../api/tsconfig.lib.json" }],
+  "references": [
+    {
+      "path": "../live-model/tsconfig.lib.json"
+    },
+    {
+      "path": "../api/tsconfig.lib.json"
+    }
+  ],
   "exclude": ["vite.config.ts"]
 }

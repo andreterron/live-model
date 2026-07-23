@@ -29,4 +29,11 @@ export default defineConfig(() => ({
       external: (source: string) => !source.match(/\.[tj]sx?$/),
     },
   },
+  test: {
+    watch: false,
+    globals: true,
+    environment: 'node',
+    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}'],
+    reporters: ['default'],
+  },
 }));
