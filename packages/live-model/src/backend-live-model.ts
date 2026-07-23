@@ -119,9 +119,4 @@ export class BackendLiveModel {
 
     return toStatusMessage(this.forKey(key).op(operation));
   }
-
-  /** Explicitly evicts cached Lives. Existing references remain usable. */
-  clear(): void {
-    this.livesByKey.clear();
-  }
 }

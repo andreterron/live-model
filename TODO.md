@@ -21,6 +21,7 @@
 # Live registry
 
 - Merge `BackendLiveModel` and its related types with `LiveModelClient`. Refactor `LiveModelClient` so its current transport dependency is an implementation or configuration concern rather than requiring a separate backend registry.
+- Consider removing `@live-model/protocol`. It was created to share types between frontend and backend packages, but `live-model` is now environment-agnostic and is already a dependency of `@live-model/api`.
 
 ## Request handler
 
