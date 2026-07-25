@@ -28,3 +28,12 @@ Live Model aims to provide Applications with these capabilities:
 
 The API should make these capabilities composable without requiring every
 application to build its own synchronization framework.
+
+## Existing Databases
+
+Live Model needs to work for companies with established data systems. It
+should be possible to connect Live Model to an existing database such as
+PostgreSQL and add reactivity, synchronization, offline behavior, and related
+capabilities on top of that database. Adopting Live Model should not require a
+company to replace its system of record or move all of its data into a
+Live-Model-specific database.
