@@ -20,12 +20,12 @@ export class SettableMemoryLive<T> extends BaseLive<T> {
     return this.state;
   }
 
-  setValue(v: T) {
+  protected override applySetValueOperation(v: T) {
     this.state = { kind: 'value', value: v };
     this.notifyLiveState(this.state);
   }
 
-  override deleteValue(): void {
+  protected override applyDeleteOperation(): void {
     this.state = { kind: 'absent', reason: 'deleted' };
     this.notifyLiveState(this.state);
   }

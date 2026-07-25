@@ -4,6 +4,7 @@
 
 import { act, renderHook, waitFor } from '@testing-library/react';
 import {
+  type Live,
   LiveHookReturn,
   useDerived,
   useDerivedValue,
@@ -20,7 +21,7 @@ describe('react useDerived', () => {
 
   beforeEach(() => {
     mockWebSocketData({ one: 1 });
-    let { result } = renderHook(() => useLiveState<number>('one'));
+    const { result } = renderHook(() => useLiveState<number>('one'));
     liveState = result;
   });
 
@@ -29,7 +30,7 @@ describe('react useDerived', () => {
   });
 
   test('can define a transformation function based on a dependency', async () => {
-    let { result } = renderHook(() =>
+    const { result } = renderHook(() =>
       useDerived(liveState.current.live, (v) =>
         v.kind === 'value' ? { ...v, value: v.value + 1 } : v
       )
@@ -39,7 +40,7 @@ describe('react useDerived', () => {
   });
 
   test('can transform to another state', () => {
-    let { result } = renderHook(() =>
+    const { result } = renderHook(() =>
       useDerived(liveState.current.live, () => ({
         kind: 'absent',
         reason: 'not_found',
@@ -54,16 +55,47 @@ describe('react useDerived', () => {
   });
 
   test('can define a setter', () => {
-    let aSetter = vitest.fn();
-    let { result } = renderHook(() =>
+    const setValue = vitest.fn();
+    const { result } = renderHook(() =>
       useDerivedValue(
         liveState.current.live,
         (v) => (v === undefined ? undefined : v + 1),
-        aSetter
+        { set_value: setValue }
       )
     );
     act(() => result.current.setValue(5));
-    expect(aSetter).toHaveBeenCalledWith(5, liveState.current.live);
+    expect(setValue).toHaveBeenCalledWith(liveState.current.live, 5);
+  });
+
+  test('preserves typed custom operation handlers', () => {
+    const increment = vitest.fn((source: Live<number>, amount: number) => {
+      source.setValue(amount);
+    });
+    const reset = vitest.fn((source: Live<number>) => {
+      void source;
+    });
+    const { result } = renderHook(() =>
+      useDerivedValue(liveState.current.live, (value) => value, {
+        increment,
+        reset,
+      })
+    );
+
+    const typedLive: Live<
+      number,
+      {
+        increment: { data: number };
+        reset: object;
+      }
+    > = result.current.live;
+
+    act(() => {
+      typedLive.op('increment', 2);
+      typedLive.op('reset');
+    });
+
+    expect(increment).toHaveBeenCalledWith(liveState.current.live, 2);
+    expect(reset).toHaveBeenCalledWith(liveState.current.live);
   });
 
   test.todo('can depend on multiple lives');

@@ -50,7 +50,7 @@ describe('StorageLive', () => {
     const live = new StorageLive('counter', storage);
     live.subscribe({ next: (state) => states.push(state) });
 
-    expect(live.op({ type: 'set_value', data: 1 })).toEqual({
+    expect(live.op('set_value', 1)).toEqual({
       status: 'error',
       error: {
         code: 'operation_failed',

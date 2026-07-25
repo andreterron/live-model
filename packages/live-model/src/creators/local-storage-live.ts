@@ -141,7 +141,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
     return state;
   }
 
-  setValue(v: T) {
+  protected override applySetValueOperation(v: T) {
     try {
       this.state = { kind: 'value', value: v };
       // Save to localStorage before notifying subscribers. Other tabs might
@@ -164,7 +164,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   }
 
   // NOTE: Copy-pasted from the setValue function above. Keep them in sync
-  deleteValue() {
+  protected override applyDeleteOperation() {
     try {
       this.state = { kind: 'absent', reason: 'deleted' };
       // Delete from localStorage before notifying subscribers. Other tabs might

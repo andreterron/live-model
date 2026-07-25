@@ -31,12 +31,11 @@ class AllKeysLive extends BaseLive<string[]> {
     );
   }
 
-  setValue(value: string[]): void {
-    void value;
+  override setValue(value: string[]): void {
     throw new Error(readOnlyAllKeysMessage());
   }
 
-  deleteValue(): void {
+  override deleteValue(): void {
     throw new Error(readOnlyAllKeysMessage());
   }
 

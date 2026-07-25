@@ -10,3 +10,4 @@ their own file. Use a date and feature in the filename.
 ## Records
 
 - [2026-07-22: Backend Lives](2026-07-22-backend-lives.md)
+- [2026-07-24: Custom Operations](2026-07-24-custom-operations.md)

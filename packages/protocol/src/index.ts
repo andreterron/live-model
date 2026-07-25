@@ -163,16 +163,44 @@ export interface Operation {
   type: string;
 }
 
-export interface SetValueOperation<T = unknown> extends Operation {
-  type: 'set_value';
-  data: T;
-}
+/**
+ * Describes the operations supported by a Live. Definition objects deliberately
+ * have room for future metadata in addition to their argument type.
+ */
+export type OperationDefinitions = Record<string, object>;
 
-export interface DeleteOperation extends Operation {
-  type: 'delete';
-}
+export type DefaultOperations<T = unknown> = {
+  set_value: { data: T };
+  delete: object;
+};
 
-export type AnyOperation<T = unknown> = SetValueOperation<T> | DeleteOperation;
+export type OperationName<OPS extends OperationDefinitions> = keyof OPS &
+  string;
+
+export type OperationData<
+  OPS extends OperationDefinitions,
+  K extends OperationName<OPS>
+> = OPS[K] extends { data: infer Data } ? Data : void;
+
+export type OperationArgs<
+  OPS extends OperationDefinitions,
+  K extends OperationName<OPS>
+> = OPS[K] extends { data: infer Data } ? [data: Data] : [];
+
+export type OperationOf<OPS extends OperationDefinitions> = {
+  [K in OperationName<OPS>]: OPS[K] extends { data: infer Data }
+    ? { type: K; data: Data }
+    : { type: K };
+}[OperationName<OPS>];
+
+export type SetValueOperation<T = unknown> = OperationOf<
+  Pick<DefaultOperations<T>, 'set_value'>
+>;
+
+export type DeleteOperation = OperationOf<Pick<DefaultOperations, 'delete'>>;
+
+/** @deprecated Prefer OperationOf<OPS> for a particular Live. */
+export type AnyOperation<T = unknown> = OperationOf<DefaultOperations<T>>;
 
 // Zod 3 infers properties using z.any() as optional. The wire format still
 // requires data for set_value, so expose the schema with the protocol type.

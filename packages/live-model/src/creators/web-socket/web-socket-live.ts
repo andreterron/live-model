@@ -57,13 +57,13 @@ export class WebSocketLive<T> extends BaseLive<T> {
     return this.state;
   }
 
-  setValue(value: T): void {
+  protected override applySetValueOperation(value: T): void {
     this.state = LiveState.value(value);
     this.sendSetValue(value);
     this.notifyLiveState(this.state);
   }
 
-  deleteValue(): void {
+  protected override applyDeleteOperation(): void {
     this.state = LiveState.absent('deleted');
     this.sendDelete();
     this.notifyLiveState(this.state);

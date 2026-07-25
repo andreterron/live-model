@@ -1,10 +1,4 @@
-import {
-  LiveState,
-  setter,
-  useDerived,
-  useDerivedValue,
-  useLiveState,
-} from 'live-model';
+import { LiveState, setter, useDerived, useLiveState } from 'live-model';
 import { BooleanControl } from './controls';
 import { Card } from '../ui/card';
 import { CardRow } from '../card-row';
@@ -27,7 +21,9 @@ export function DerivedSample() {
       console.log('Unexpected state:', state);
       return state;
     },
-    setter.transform((v) => !v)
+    {
+      set_value: setter.transform((v) => !v),
+    }
   );
 
   return (

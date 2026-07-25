@@ -3,6 +3,18 @@ import { awaitableFn } from '../test-utils/wait-for-call.js';
 import { vi } from 'vitest';
 
 describe('reactivity', () => {
+  test('accepts serialized operation objects', () => {
+    const live = new SettableMemoryLive(1);
+
+    expect(live.op({ type: 'set_value', data: 2 })).toEqual({
+      status: 'success',
+    });
+    expect(live.get()).toEqual({ kind: 'value', value: 2 });
+
+    expect(live.op({ type: 'delete' })).toEqual({ status: 'success' });
+    expect(live.get()).toEqual({ kind: 'absent', reason: 'deleted' });
+  });
+
   test('subscribers get a callback when the value changes', async () => {
     // Setup
     const live = new SettableMemoryLive(1);

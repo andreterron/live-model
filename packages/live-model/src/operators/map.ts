@@ -1,18 +1,46 @@
-import type { LiveState } from '@live-model/protocol';
-import { LiveDeleter } from '../deleter.js';
-import { BaseLive, Live } from '../live.js';
+import type {
+  LiveState,
+  OperationArgs,
+  OperationDefinitions,
+  OperationName,
+  OperationOf,
+  OperationResult,
+} from '@live-model/protocol';
+import { BaseLive, Live, toOperation } from '../live.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';
-import { LiveSetter } from '../setter.js';
 
-class MappedLive<T, Input> extends BaseLive<T> {
+export type DerivedOperationHandlers<
+  Input,
+  OPS extends OperationDefinitions
+> = {
+  [K in OperationName<OPS>]: OPS[K] extends { data: infer Data }
+    ? (source: Live<Input>, data: Data) => void
+    : (source: Live<Input>) => void;
+};
+
+export type DerivedOperationHandlerMap = Record<
+  string,
+  (...args: any[]) => void
+>;
+
+export type OperationsFromHandlers<H extends DerivedOperationHandlerMap> = {
+  [K in keyof H & string]: Parameters<H[K]> extends [any, infer Data, ...any[]]
+    ? { data: Data }
+    : object;
+};
+
+class MappedLive<
+  T,
+  Input,
+  H extends DerivedOperationHandlerMap
+> extends BaseLive<T, OperationsFromHandlers<H>> {
   protected inputSubscription: Subscription | undefined;
 
   constructor(
     private live: Live<Input>,
     protected transform: (state: LiveState<Input>) => LiveState<T>,
-    protected setter?: LiveSetter<Input, T>,
-    protected deleter?: LiveDeleter<Input>
+    protected operationHandlers: H
   ) {
     super();
   }
@@ -46,22 +74,42 @@ class MappedLive<T, Input> extends BaseLive<T> {
     };
   }
 
-  override setValue(value: T): void {
-    if (!this.setter) {
-      // no-op
-      return;
+  override op(
+    operation: OperationOf<OperationsFromHandlers<H>>
+  ): OperationResult;
+  override op<K extends OperationName<OperationsFromHandlers<H>>>(
+    type: K,
+    ...args: OperationArgs<OperationsFromHandlers<H>, K>
+  ): OperationResult;
+  override op(
+    operationOrType:
+      | OperationOf<OperationsFromHandlers<H>>
+      | OperationName<OperationsFromHandlers<H>>,
+    ...args: unknown[]
+  ): OperationResult {
+    const operation = toOperation<OperationsFromHandlers<H>>(
+      operationOrType,
+      args
+    );
+    const handler = this.operationHandlers[operation.type];
+
+    if (!handler) {
+      return {
+        status: 'error',
+        error: {
+          code: 'unsupported_operation',
+          message: `Operation "${operation.type}" is not supported by this derived Live`,
+        },
+      };
     }
 
-    this.setter(value, this.live);
-  }
-
-  override deleteValue(): void {
-    if (!this.deleter) {
-      // no-op
-      return;
+    if ('data' in operation) {
+      handler(this.live, operation.data);
+    } else {
+      handler(this.live);
     }
 
-    this.deleter(this.live);
+    return { status: 'success' };
   }
 }
 
@@ -76,20 +124,36 @@ export function valueTransform<T, U>(
   };
 }
 
+export function mapState<T, U, H extends DerivedOperationHandlerMap>(
+  live: Live<T>,
+  transform: (state: LiveState<T>) => LiveState<U>,
+  operationHandlers: H
+): Live<U, OperationsFromHandlers<H>>;
+export function mapState<T, U>(
+  live: Live<T>,
+  transform: (state: LiveState<T>) => LiveState<U>
+): Live<U, Record<never, never>>;
 export function mapState<T, U>(
   live: Live<T>,
   transform: (state: LiveState<T>) => LiveState<U>,
-  setter?: LiveSetter<T, U>,
-  deleter?: LiveDeleter<T>
-): Live<U> {
-  return new MappedLive(live, transform, setter, deleter);
+  operationHandlers: DerivedOperationHandlerMap = {}
+): any {
+  return new MappedLive(live, transform, operationHandlers);
 }
 
+export function mapValue<T, U, H extends DerivedOperationHandlerMap>(
+  live: Live<T>,
+  transform: (v: T) => U,
+  operationHandlers: H
+): Live<U, OperationsFromHandlers<H>>;
+export function mapValue<T, U>(
+  live: Live<T>,
+  transform: (v: T) => U
+): Live<U, Record<never, never>>;
 export function mapValue<T, U>(
   live: Live<T>,
   transform: (v: T) => U,
-  setter?: LiveSetter<T, U>,
-  deleter?: LiveDeleter<T>
-): Live<U> {
-  return mapState(live, valueTransform(transform), setter, deleter);
+  operationHandlers?: DerivedOperationHandlerMap
+): any {
+  return mapState(live, valueTransform(transform), operationHandlers ?? {});
 }

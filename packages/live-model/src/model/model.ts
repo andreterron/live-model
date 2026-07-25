@@ -1,8 +1,10 @@
-import { LiveDeleter } from '../deleter.js';
-import { defaultLiveModelClient, LiveModelClient } from '../live-model-client.js';
+import type { DefaultOperations } from '@live-model/protocol';
+import {
+  defaultLiveModelClient,
+  LiveModelClient,
+} from '../live-model-client.js';
 import { HACKY_getCurrentLiveValue, Live } from '../live.js';
-import { mapValue } from '../operators/map.js';
-import { LiveSetter } from '../setter.js';
+import { type DerivedOperationHandlers, mapValue } from '../operators/map.js';
 import { generateId } from './generate-id.js';
 
 export type LiveModelType = {
@@ -11,6 +13,11 @@ export type LiveModelType = {
 export interface AnyLiveModelType extends LiveModelType {
   [key: string]: any;
 }
+
+type FindOperationHandlers<T> = DerivedOperationHandlers<
+  T[],
+  DefaultOperations<T | undefined>
+>;
 
 export class Model<T extends LiveModelType = AnyLiveModelType> {
   protected liveList: Live<T[]>;
@@ -27,11 +34,10 @@ export class Model<T extends LiveModelType = AnyLiveModelType> {
   }
 
   selectById(id: string): Live<T | undefined> {
-    return this.find(
-      (v) => v.id === id,
-      (newValue, source) => {
+    return this.find((v) => v.id === id, {
+      set_value: (source, newValue) => {
         const list =
-          HACKY_getCurrentLiveValue(source, 'Model.selectById.setter') ?? [];
+          HACKY_getCurrentLiveValue(source, 'Model.selectById.set_value') ?? [];
         if (newValue === undefined) {
           source.setValue(list.filter((v) => v.id !== id));
           return;
@@ -48,47 +54,45 @@ export class Model<T extends LiveModelType = AnyLiveModelType> {
           newList.push(newValue);
         }
         source.setValue(newList);
-      }
-    );
+      },
+    });
   }
 
   // TODO: Replace `Live<T | undefined>` with `Live<T>` and `absent/not_found`
   find(
     predicate: (v: T) => boolean,
-    setter?: LiveSetter<T[], T | undefined>,
-    deleter?: LiveDeleter<T[]>
+    operationHandlers: Partial<FindOperationHandlers<T>> = {}
   ): Live<T | undefined> {
-    return mapValue(
-      this.liveList,
-      (list) => list.find((v) => predicate(v)),
-      setter ??
-        ((newValue, source) => {
-          const list =
-            HACKY_getCurrentLiveValue(source, 'Model.find.setter') ?? [];
-          if (newValue === undefined) {
-            console.error(
-              'Trying to set the value of a `.find()` to undefined'
-            );
-            return;
+    const defaultHandlers: FindOperationHandlers<T> = {
+      set_value: (source, newValue) => {
+        const list =
+          HACKY_getCurrentLiveValue(source, 'Model.find.set_value') ?? [];
+        if (newValue === undefined) {
+          console.error('Trying to set the value of a `.find()` to undefined');
+          return;
+        }
+        let isSet = false;
+        const newList = list.map((item) => {
+          if (predicate(item)) {
+            isSet = true;
+            return newValue;
           }
-          let isSet = false;
-          const newList = list.map((item) => {
-            if (predicate(item)) {
-              isSet = true;
-              return newValue;
-            }
-            return item;
-          });
-          if (!isSet) {
-            newList.push(newValue);
-          }
-          source.setValue(newList);
-        }),
-      deleter ??
-        (() => {
-          console.error('Trying to delete the value of a `.find()`');
-        })
-    );
+          return item;
+        });
+        if (!isSet) {
+          newList.push(newValue);
+        }
+        source.setValue(newList);
+      },
+      delete: () => {
+        console.error('Trying to delete the value of a `.find()`');
+      },
+    };
+
+    return mapValue(this.liveList, (list) => list.find((v) => predicate(v)), {
+      ...defaultHandlers,
+      ...operationHandlers,
+    });
   }
 
   // Value will be undefined if the record is deleted later on

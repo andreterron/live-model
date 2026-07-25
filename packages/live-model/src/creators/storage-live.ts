@@ -1,9 +1,12 @@
 import {
   LiveState,
-  type AnyOperation,
+  type DefaultOperations,
+  type OperationArgs,
+  type OperationName,
+  type OperationOf,
   type OperationResult,
 } from '@live-model/protocol';
-import { BaseLive } from '../live.js';
+import { BaseLive, toOperation } from '../live.js';
 import type { Subscriber } from '../reactivity/subscriber.js';
 import type { Subscription } from '../reactivity/subscription.js';
 
@@ -38,15 +41,18 @@ export class StorageLive<T> extends BaseLive<T> {
     return this.storage.get(this.key) as LiveState<T>;
   }
 
-  setValue(value: T): void {
-    this.op({ type: 'set_value', data: value });
-  }
-
-  deleteValue(): void {
-    this.op({ type: 'delete' });
-  }
-
-  override op(operation: AnyOperation<T>): OperationResult {
+  override op(operation: OperationOf<DefaultOperations<T>>): OperationResult;
+  override op<K extends OperationName<DefaultOperations<T>>>(
+    type: K,
+    ...args: OperationArgs<DefaultOperations<T>, K>
+  ): OperationResult;
+  override op(
+    operationOrType:
+      | OperationOf<DefaultOperations<T>>
+      | OperationName<DefaultOperations<T>>,
+    ...args: unknown[]
+  ): OperationResult {
+    const operation = toOperation<DefaultOperations<T>>(operationOrType, args);
     const existedBefore = this.storage.get(this.key).kind === 'value';
     const persisted =
       operation.type === 'delete'

@@ -1,19 +1,13 @@
 import { Live } from './live.js';
 
-// TODO: This isn't generic enough
-export type LiveSetter<T, U> = (value: U, source: Live<T>) => void;
-
 export const setter = {
-  passthrough<T>(): LiveSetter<T, T> {
-    return (v, source) => source.setValue(v);
+  passthrough<T>() {
+    return (source: Live<T>, value: T) => source.setValue(value);
   },
-  transform<T, U>(transform: (value: U) => T): LiveSetter<T, U> {
-    return (v, source) => source.setValue(transform(v));
+  transform<T, U>(transform: (value: U) => T) {
+    return (source: Live<T>, value: U) => source.setValue(transform(value));
   },
-  handler<U, T = unknown>(
-    handler: (value: U, source: Live<T>) => void
-  ): LiveSetter<T, U> {
+  handler<U, T = unknown>(handler: (source: Live<T>, value: U) => void) {
     return handler;
   },
-  noop: undefined,
 };

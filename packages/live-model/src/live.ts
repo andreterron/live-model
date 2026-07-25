@@ -1,25 +1,40 @@
 import type {
   AbsentReason,
-  AnyOperation,
+  DefaultOperations,
   LiveState,
+  OperationArgs,
+  OperationDefinitions,
+  OperationName,
+  OperationOf,
   OperationResult,
 } from '@live-model/protocol';
 import { Subscriber } from './reactivity/subscriber.js';
 import { Subscription } from './reactivity/subscription.js';
 
-export interface Live<T> {
+export interface Live<
+  T,
+  OPS extends OperationDefinitions = DefaultOperations<T>
+> {
   get(): LiveState<T>;
   subscribe(subscriber: Subscriber<LiveState<T>>): Subscription;
 
   // Actions
 
   // TODO: `op()` can't always synchronously return a result
-  op(operation: AnyOperation<T>): OperationResult;
+  op(operation: OperationOf<OPS>): OperationResult;
+  op<K extends OperationName<OPS>>(
+    type: K,
+    ...args: OperationArgs<OPS, K>
+  ): OperationResult;
   setValue(value: T): void;
   deleteValue(): void;
 }
 
-export abstract class BaseLive<T> implements Live<T> {
+export abstract class BaseLive<
+  T,
+  OPS extends OperationDefinitions = DefaultOperations<T>
+> implements Live<T, OPS>
+{
   protected subscribers = new Set<Subscriber<LiveState<T>>>();
 
   subscribe(subscriber: Subscriber<LiveState<T>>): Subscription {
@@ -45,19 +60,70 @@ export abstract class BaseLive<T> implements Live<T> {
     this.subscribers.forEach((s) => s.next(liveState));
   }
 
-  op(operation: AnyOperation<T>): OperationResult {
+  op(operation: OperationOf<OPS>): OperationResult;
+  op<K extends OperationName<OPS>>(
+    type: K,
+    ...args: OperationArgs<OPS, K>
+  ): OperationResult;
+  op(
+    operationOrType: OperationOf<OPS> | OperationName<OPS>,
+    ...args: unknown[]
+  ): OperationResult {
+    const operation = toOperation<OPS>(operationOrType, args);
+
     if (operation.type === 'delete') {
-      this.deleteValue();
-    } else {
-      this.setValue(operation.data);
+      this.applyDeleteOperation();
+      return { status: 'success' };
     }
 
-    return { status: 'success' };
+    if (operation.type === 'set_value') {
+      this.applySetValueOperation(
+        ('data' in operation ? operation.data : undefined) as T
+      );
+      return { status: 'success' };
+    }
+
+    return {
+      status: 'error',
+      error: {
+        code: 'unsupported_operation',
+        message: `Operation "${operation.type}" is not supported by this Live`,
+      },
+    };
+  }
+
+  setValue(value: T): void {
+    (this.op as any)('set_value', value);
+  }
+
+  deleteValue(): void {
+    (this.op as any)('delete');
   }
 
   abstract get(): LiveState<T>;
-  abstract setValue(value: T): void;
-  abstract deleteValue(): void;
+
+  protected applySetValueOperation(value: T): void {
+    throw new Error('set_value is not supported by this Live');
+  }
+
+  protected applyDeleteOperation(): void {
+    throw new Error('delete is not supported by this Live');
+  }
+}
+
+export function toOperation<OPS extends OperationDefinitions>(
+  operationOrType: OperationOf<OPS> | OperationName<OPS>,
+  args: readonly unknown[]
+): OperationOf<OPS> {
+  if (typeof operationOrType === 'object') {
+    return operationOrType;
+  }
+
+  return (
+    args.length === 0
+      ? { type: operationOrType }
+      : { type: operationOrType, data: args[0] }
+  ) as OperationOf<OPS>;
 }
 
 /**
@@ -67,7 +133,7 @@ export abstract class BaseLive<T> implements Live<T> {
  * these edge cases and returns undefined
  */
 export function HACKY_getCurrentLiveValue<T>(
-  live: Live<T>,
+  live: Pick<Live<T>, 'get'>,
   operationName?: string
 ): T | undefined {
   // TODO: Refactor the codebase to delete this whole function

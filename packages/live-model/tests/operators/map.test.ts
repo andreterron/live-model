@@ -1,4 +1,5 @@
 import {
+  type Live,
   mapState,
   mapValue,
   SettableMemoryLive,
@@ -28,14 +29,19 @@ describe('operator mapValue', () => {
   test('can define a setter', async () => {
     // Setup
     const transform = vitest.fn((v) => v + 1);
-    const aSetter = vitest.fn();
-    const live = mapValue(source, transform, aSetter);
+    const setValue = vitest.fn((input: Live<number>, value: number) => {
+      void input;
+      void value;
+    });
+    const live = mapValue(source, transform, {
+      set_value: setValue,
+    });
 
     // Test
-    live.setValue(2);
+    live.op('set_value', 2);
 
     // Verify
-    expect(aSetter).toHaveBeenCalledWith(2, source);
+    expect(setValue).toHaveBeenCalledWith(source, 2);
   });
 
   test('notifies subscribers with transformed live state values', () => {
@@ -59,14 +65,53 @@ describe('operator mapValue', () => {
   test('can define a deleter', () => {
     // Setup
     const transform = vitest.fn((v) => v + 1);
-    const aDeleter = vitest.fn();
-    const live = mapValue(source, transform, undefined, aDeleter);
+    const deleteValue = vitest.fn((input: Live<number>) => {
+      void input;
+    });
+    const live = mapValue(source, transform, {
+      delete: deleteValue,
+    });
 
     // Test
-    live.deleteValue();
+    live.op('delete');
 
     // Verify
-    expect(aDeleter).toHaveBeenCalledWith(source);
+    expect(deleteValue).toHaveBeenCalledWith(source);
+  });
+
+  test('infers and dispatches custom operations from a handler map', () => {
+    const increment = vitest.fn((input: Live<number>, amount: number) => {
+      const state = input.get();
+      if (state.kind === 'value') {
+        input.setValue(state.value + amount);
+      }
+    });
+    const reset = vitest.fn((input: Live<number>) => {
+      input.setValue(0);
+    });
+    const live = mapValue(source, (value) => value * 2, {
+      increment,
+      reset,
+    });
+
+    const typedLive: Live<
+      number,
+      {
+        increment: { data: number };
+        reset: object;
+      }
+    > = live;
+    expect(typedLive).toBe(live);
+
+    expect(live.op({ type: 'increment', data: 2 })).toEqual({
+      status: 'success',
+    });
+    expect(live.get()).toEqual({ kind: 'value', value: 6 });
+    expect(increment).toHaveBeenCalledWith(source, 2);
+
+    expect(live.op('reset')).toEqual({ status: 'success' });
+    expect(live.get()).toEqual({ kind: 'value', value: 0 });
+    expect(reset).toHaveBeenCalledWith(source);
   });
 
   test('mapState transforms the live state', () => {
