@@ -92,4 +92,49 @@ describe('createOperationsHandler', () => {
     expect(invalidJson.status).toBe(400);
     expect(invalidOperations.status).toBe(400);
   });
+
+  test('accepts arbitrary operation types on the wire', async () => {
+    const handler = createOperationsHandler(
+      new BackendLiveModel(createStorage({ items: ['first'] }), {
+        operationHandlers: {
+          append(currentState, operation) {
+            if (
+              currentState.kind !== 'value' ||
+              !Array.isArray(currentState.value) ||
+              typeof operation.data !== 'string'
+            ) {
+              return {
+                status: 'error',
+                error: { code: 'invalid_state' },
+              };
+            }
+
+            return {
+              status: 'success',
+              action: 'set',
+              value: [...currentState.value, operation.data],
+            };
+          },
+        },
+      })
+    );
+    const response = await handler(
+      new Request('http://localhost/operations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify([
+          {
+            type: 'op',
+            key: 'items',
+            operation: { type: 'append', data: 'second' },
+          },
+        ]),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      { type: 'op_status', status: 'success' },
+    ]);
+  });
 });

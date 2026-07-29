@@ -1,4 +1,8 @@
-import { StorageLive, type StorageAdapter } from '../src/index.js';
+import {
+  StorageLive,
+  type Operation,
+  type StorageAdapter,
+} from '../src/index.js';
 
 function createStorage(): StorageAdapter {
   const values = new Map<string, unknown>();
@@ -58,5 +62,68 @@ describe('StorageLive', () => {
       },
     });
     expect(states).toEqual([{ kind: 'absent', reason: 'not_found' }]);
+  });
+
+  test('applies registered custom operations to the current state', () => {
+    const storage = createStorage();
+    storage.set('items', ['first']);
+    const states: unknown[] = [];
+    const live = new StorageLive<unknown[], { type: 'append'; data: string }>(
+      'items',
+      storage,
+      {
+        operationHandlers: {
+          append(currentState, operation) {
+            if (
+              currentState.kind !== 'value' ||
+              !Array.isArray(currentState.value) ||
+              typeof operation.data !== 'string'
+            ) {
+              return {
+                status: 'error',
+                error: {
+                  code: 'invalid_state',
+                  message: 'append requires an array value',
+                },
+              };
+            }
+
+            return {
+              status: 'success',
+              action: 'set',
+              value: [...currentState.value, operation.data],
+            };
+          },
+        },
+      }
+    );
+    live.subscribe({ next: (state) => states.push(state) });
+
+    expect(live.op({ type: 'append', data: 'second' })).toEqual({
+      status: 'success',
+    });
+    expect(storage.get('items')).toEqual({
+      kind: 'value',
+      value: ['first', 'second'],
+    });
+    expect(states[states.length - 1]).toEqual({
+      kind: 'value',
+      value: ['first', 'second'],
+    });
+  });
+
+  test('rejects unregistered custom operations without replacing state', () => {
+    const storage = createStorage();
+    storage.set('items', ['first']);
+    const live = new StorageLive<unknown[], Operation>('items', storage);
+
+    expect(live.op({ type: 'append', data: 'second' })).toMatchObject({
+      status: 'error',
+      error: { code: 'unsupported_operation' },
+    });
+    expect(storage.get('items')).toEqual({
+      kind: 'value',
+      value: ['first'],
+    });
   });
 });

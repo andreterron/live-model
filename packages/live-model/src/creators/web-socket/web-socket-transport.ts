@@ -1,8 +1,10 @@
 import {
   operationMessageSchema,
+  querySnapshotMessageSchema,
   stateMessageSchema,
-  type AnyOperation,
+  type Operation,
   type ProtocolMessage,
+  type QuerySnapshotMessage,
   type StateMessage,
 } from '@live-model/protocol';
 import type { Subscription } from '../../reactivity/subscription.js';
@@ -19,12 +21,21 @@ export interface WebSocketTransportSubscriber {
   open?(): void;
 }
 
+export interface WebSocketQuerySubscriber {
+  message(message: QuerySnapshotMessage): void;
+  close?(event: CloseEvent): void;
+  error?(event: Event): void;
+  open?(): void;
+}
+
 export interface WebSocketTransportConnection extends Subscription {
-  send(operation: AnyOperation): void;
+  send(operation: Operation): void;
 }
 
 // TODO: Receive OperationStatusMessage
-export type WebSocketTransportIncomingMessage = StateMessage;
+export type WebSocketTransportIncomingMessage =
+  | StateMessage
+  | QuerySnapshotMessage;
 
 type WebSocketTransportConnectionInternal = WebSocketTransportConnection & {
   key: string;
@@ -44,6 +55,7 @@ export class WebSocketTransport {
     string,
     ReturnType<typeof setTimeout>
   >();
+  protected querySubscribersById = new Map<string, WebSocketQuerySubscriber>();
 
   constructor(
     protected url: string | URL,
@@ -81,7 +93,10 @@ export class WebSocketTransport {
           this.scheduleUnsubscribe(key);
         }
 
-        if (this.subscribersByKey.size === 0) {
+        if (
+          this.subscribersByKey.size === 0 &&
+          this.querySubscribersById.size === 0
+        ) {
           this.scheduleCloseSocket();
         }
       },
@@ -96,6 +111,39 @@ export class WebSocketTransport {
     }
 
     return connection;
+  }
+
+  query(
+    queryId: string,
+    query: unknown,
+    subscriber: WebSocketQuerySubscriber
+  ): Subscription {
+    this.cancelCloseSocketTimeout();
+    this.querySubscribersById.set(queryId, subscriber);
+    this.send({
+      type: 'query',
+      queryId,
+      data_source: 'entities',
+      query,
+    });
+
+    return {
+      unsubscribe: () => {
+        if (this.querySubscribersById.get(queryId) !== subscriber) {
+          return;
+        }
+
+        this.querySubscribersById.delete(queryId);
+        this.send({ type: 'unquery', queryId });
+
+        if (
+          this.subscribersByKey.size === 0 &&
+          this.querySubscribersById.size === 0
+        ) {
+          this.scheduleCloseSocket();
+        }
+      },
+    };
   }
 
   protected send(message: ProtocolMessage): void {
@@ -172,7 +220,10 @@ export class WebSocketTransport {
     this.closeSocketTimeout = setTimeout(() => {
       this.closeSocketTimeout = undefined;
 
-      if (this.subscribersByKey.size === 0) {
+      if (
+        this.subscribersByKey.size === 0 &&
+        this.querySubscribersById.size === 0
+      ) {
         this.closeSocket();
       }
     }, WebSocketTransport.closeDelayMs);
@@ -225,6 +276,9 @@ export class WebSocketTransport {
     for (const subscriber of this.getAllSubscribers()) {
       subscriber.open?.();
     }
+    for (const subscriber of this.querySubscribersById.values()) {
+      subscriber.open?.();
+    }
   }).bind(this);
 
   protected handleMessage = ((event: MessageEvent) => {
@@ -247,14 +301,20 @@ export class WebSocketTransport {
       return;
     }
 
-    const connections = this.subscribersByKey.get(message.key);
+    switch (message.type) {
+      case 'query_snapshot':
+        this.querySubscribersById.get(message.queryId)?.message(message);
+        break;
+      case 'state': {
+        const connections = this.subscribersByKey.get(message.key);
 
-    if (!connections) {
-      return;
-    }
-
-    for (const connection of connections) {
-      connection.subscriber.message(message);
+        if (connections) {
+          for (const connection of connections) {
+            connection.subscriber.message(message);
+          }
+        }
+        break;
+      }
     }
   }).bind(this);
 
@@ -264,12 +324,18 @@ export class WebSocketTransport {
     for (const subscriber of this.getAllSubscribers()) {
       subscriber.close?.(event);
     }
+    for (const subscriber of this.querySubscribersById.values()) {
+      subscriber.close?.(event);
+    }
   }).bind(this);
 
   protected handleError = ((event: Event) => {
     console.error('[LiveModel] WebSocketTransport error', event);
 
     for (const subscriber of this.getAllSubscribers()) {
+      subscriber.error?.(event);
+    }
+    for (const subscriber of this.querySubscribersById.values()) {
       subscriber.error?.(event);
     }
   }).bind(this);
@@ -283,13 +349,19 @@ export class WebSocketTransport {
       return stateResult.data as StateMessage;
     }
 
+    const querySnapshotResult = querySnapshotMessageSchema.safeParse(value);
+
+    if (querySnapshotResult.success) {
+      return querySnapshotResult.data as QuerySnapshotMessage;
+    }
+
     return this.parseOperationMessageAsState(value);
   }
 
   protected forwardToSubscribers(
     sender: WebSocketTransportConnectionInternal,
     key: string,
-    operation: AnyOperation
+    operation: Operation
   ) {
     const connections = this.subscribersByKey.get(key);
 
@@ -302,7 +374,10 @@ export class WebSocketTransport {
         continue;
       }
 
-      connection.subscriber.message(this.operationToState(key, operation));
+      const state = this.operationToState(key, operation);
+      if (state) {
+        connection.subscriber.message(state);
+      }
     }
   }
 
@@ -312,10 +387,7 @@ export class WebSocketTransport {
     const result = operationMessageSchema.safeParse(value);
 
     if (result.success) {
-      return this.operationToState(
-        result.data.key,
-        result.data.operation as AnyOperation
-      );
+      return this.operationToState(result.data.key, result.data.operation);
     }
 
     return undefined;
@@ -323,8 +395,8 @@ export class WebSocketTransport {
 
   protected operationToState(
     key: string,
-    operation: AnyOperation
-  ): StateMessage {
+    operation: Operation
+  ): StateMessage | undefined {
     if (operation.type === 'set_value') {
       return {
         type: 'state',
@@ -336,14 +408,18 @@ export class WebSocketTransport {
       };
     }
 
-    return {
-      type: 'state',
-      key,
-      state: {
-        kind: 'absent',
-        reason: 'deleted',
-      },
-    };
+    if (operation.type === 'delete') {
+      return {
+        type: 'state',
+        key,
+        state: {
+          kind: 'absent',
+          reason: 'deleted',
+        },
+      };
+    }
+
+    return undefined;
   }
 
   protected getAllSubscribers() {

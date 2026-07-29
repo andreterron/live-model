@@ -10,6 +10,11 @@ export * from './creators/web-socket/web-socket-live.js';
 // Operators
 export * from './operators/map.js';
 
+// Query
+export * from './query/entities-query-source.js';
+export * from './query/web-socket-query-source.js';
+export type * from './query/query-source.js';
+
 // Reactivity
 export type * from './reactivity/subscriber.js';
 export type * from './reactivity/subscription.js';

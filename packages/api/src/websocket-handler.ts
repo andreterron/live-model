@@ -1,10 +1,16 @@
 import {
   type OperationStatusMessage,
   type ProtocolMessage,
+  type QuerySnapshotMessage,
   protocolMessageSchema,
 } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
-import type { BackendLiveModel, Subscription } from 'live-model';
+import {
+  EntitiesQuerySource,
+  type BackendLiveModel,
+  type QuerySource,
+  type Subscription,
+} from 'live-model';
 
 // TODO: Remove/Replace this type
 export interface LiveModelWebSocketLogger {
@@ -25,9 +31,11 @@ function sendError(peer: Peer, error: string) {
 
 export function createLiveModelWebSocket(
   liveModel: BackendLiveModel,
-  logger: LiveModelWebSocketLogger = console
+  logger: LiveModelWebSocketLogger = console,
+  entityQuerySource: QuerySource = new EntitiesQuerySource(liveModel)
 ): WSOptions {
   const peerSubscriptions = new Map<Peer, Map<string, Subscription>>();
+  const peerQueries = new Map<Peer, Map<string, Subscription>>();
   // TODO: Remove/refactor this synchronous suppression mechanism. Operations
   // should carry origin and operation IDs, and resulting state messages should
   // reference the operation so transports or clients can reconcile safely.
@@ -91,6 +99,65 @@ export function createLiveModelWebSocket(
     peerSubscriptions.delete(peer);
   }
 
+  function unsubscribePeerFromQuery(peer: Peer, queryId: string) {
+    const queries = peerQueries.get(peer);
+    queries?.get(queryId)?.unsubscribe();
+    queries?.delete(queryId);
+
+    if (queries?.size === 0) {
+      peerQueries.delete(peer);
+    }
+  }
+
+  function subscribePeerToQuery(peer: Peer, queryId: string, query: unknown) {
+    unsubscribePeerFromQuery(peer, queryId);
+
+    let querySubscription: Subscription;
+    try {
+      querySubscription = entityQuerySource.query(query, {
+        next(result) {
+          const message: QuerySnapshotMessage = {
+            type: 'query_snapshot',
+            queryId,
+            ...result,
+          };
+          peer.send(JSON.stringify(message));
+        },
+        error(error) {
+          sendError(
+            peer,
+            error instanceof Error ? error.message : 'Query source failed'
+          );
+        },
+      });
+    } catch (error) {
+      sendError(
+        peer,
+        error instanceof Error ? error.message : 'Query source failed'
+      );
+      return;
+    }
+
+    let queries = peerQueries.get(peer);
+    if (!queries) {
+      queries = new Map();
+      peerQueries.set(peer, queries);
+    }
+    queries.set(queryId, querySubscription);
+  }
+
+  function unsubscribePeerFromAllQueries(peer: Peer) {
+    const queries = peerQueries.get(peer);
+    if (!queries) {
+      return;
+    }
+
+    for (const subscription of queries.values()) {
+      subscription.unsubscribe();
+    }
+    peerQueries.delete(peer);
+  }
+
   return {
     open(peer: Peer) {
       logger.log('[ws] open', peer.toString());
@@ -125,6 +192,20 @@ export function createLiveModelWebSocket(
         return;
       }
 
+      if (protocolMessage.type === 'query') {
+        subscribePeerToQuery(
+          peer,
+          protocolMessage.queryId,
+          protocolMessage.query
+        );
+        return;
+      }
+
+      if (protocolMessage.type === 'unquery') {
+        unsubscribePeerFromQuery(peer, protocolMessage.queryId);
+        return;
+      }
+
       suppressedNotification = {
         peer,
         key: protocolMessage.key,
@@ -146,6 +227,7 @@ export function createLiveModelWebSocket(
 
     close(peer: Peer, event: unknown) {
       unsubscribePeerFromAllKeys(peer);
+      unsubscribePeerFromAllQueries(peer);
       logger.log('[ws] close', peer.toString(), event);
     },
 

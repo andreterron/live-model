@@ -1,18 +1,22 @@
 import {
   allKeysKey,
   LiveState,
-  type AnyOperation,
+  type Operation,
   type OperationResult,
   type OperationStatusMessage,
 } from '@live-model/protocol';
-import { StorageLive, type StorageAdapter } from './creators/storage-live.js';
+import {
+  StorageLive,
+  type StorageAdapter,
+  type StorageOperationHandlers,
+} from './creators/storage-live.js';
 import { BaseLive, type Live } from './live.js';
 import type { Subscriber } from './reactivity/subscriber.js';
 import type { Subscription } from './reactivity/subscription.js';
 
 export type BackendLiveFactory = <T>(key: string) => Live<T>;
 
-class AllKeysLive extends BaseLive<string[]> {
+class AllKeysLive extends BaseLive<string[], never> {
   constructor(private readonly storage: StorageAdapter) {
     super();
   }
@@ -65,6 +69,7 @@ function toStatusMessage(result: OperationResult): OperationStatusMessage {
 
 export interface BackendLiveModelOptions {
   createLive?: BackendLiveFactory;
+  operationHandlers?: StorageOperationHandlers;
 }
 
 // TODO: Merge BackendLiveModel and its related types with LiveModelClient.
@@ -88,8 +93,9 @@ export class BackendLiveModel {
     this.createLive =
       options.createLive ??
       (<T>(key: string) =>
-        new StorageLive<T>(key, this.storage, {
+        new StorageLive<T, Operation>(key, this.storage, {
           onKeyMembershipChange: () => this.allKeysLive.refresh(),
+          operationHandlers: options.operationHandlers,
         }));
   }
 
@@ -108,10 +114,7 @@ export class BackendLiveModel {
     return live as Live<T>;
   }
 
-  processOperation(
-    key: string,
-    operation: AnyOperation
-  ): OperationStatusMessage {
+  processOperation(key: string, operation: Operation): OperationStatusMessage {
     if (key === allKeysKey) {
       return toStatusMessage(operationError(readOnlyAllKeysMessage()));
     }

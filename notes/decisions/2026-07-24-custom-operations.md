@@ -3,6 +3,25 @@
 - Date: 2026-07-24
 - Status: Current, revisitable
 
+## Amendment: operation unions on `Live`
+
+On 2026-07-28, the second `Live<T, OPS>` parameter changed from an
+operation-definition map to a discriminated union of serialized operations:
+
+```ts
+type CounterOperations = { type: 'set_value'; data: number } | { type: 'increment'; data: number } | { type: 'delete' };
+```
+
+`Live<T>` now defaults `OPS` to the generic `Operation` envelope. This lets
+backend routing pass wire operations directly to `live.op(operation)` without
+casting. A specialized Live can still supply a narrower union to type both
+operation objects and ergonomic `op(name, data)` calls.
+
+Handler maps remain the convenient declaration form for derived Lives, but
+`OperationsFromHandlers` now converts them to an operation union. The
+definition-map and `OperationOf` utilities remain available as construction
+helpers; they are no longer the representation used by `Live` itself.
+
 ## Context
 
 Lives originally supported only `set_value` and `delete`. Their types,

@@ -1,4 +1,4 @@
-import type { AnyOperation, StateMessage } from '@live-model/protocol';
+import type { Operation, StateMessage } from '@live-model/protocol';
 import { act } from '@testing-library/react';
 import {
   configureLiveModel,
@@ -7,7 +7,7 @@ import {
   type WebSocketTransportSubscriber,
 } from '../../src/index.js';
 
-type WriteMessage = AnyOperation;
+type WriteMessage = Operation;
 
 type Connection = WebSocketTransportConnection & {
   key: string;
@@ -42,7 +42,10 @@ class MockWebSocketTransport extends WebSocketTransport {
       subscriber,
       send: (message) => {
         this.applyMessage(key, message);
-        this.broadcast(this.operationToState(key, message), connection);
+        const state = this.operationToState(key, message);
+        if (state) {
+          this.broadcast(state, connection);
+        }
       },
       unsubscribe: () => {
         connections.delete(connection);
@@ -87,7 +90,9 @@ class MockWebSocketTransport extends WebSocketTransport {
       return;
     }
 
-    this.values.delete(key);
+    if (message.type === 'delete') {
+      this.values.delete(key);
+    }
   }
 
   private broadcast(message: StateMessage, sender: Connection) {
@@ -115,7 +120,7 @@ class MockWebSocketTransport extends WebSocketTransport {
   override operationToState(
     key: string,
     message: WriteMessage
-  ): StateMessage {
+  ): StateMessage | undefined {
     if (message.type === 'set_value') {
       return {
         type: 'state',
@@ -127,14 +132,18 @@ class MockWebSocketTransport extends WebSocketTransport {
       };
     }
 
-    return {
-      type: 'state',
-      key,
-      state: {
-        kind: 'absent',
-        reason: 'deleted',
-      },
-    };
+    if (message.type === 'delete') {
+      return {
+        type: 'state',
+        key,
+        state: {
+          kind: 'absent',
+          reason: 'deleted',
+        },
+      };
+    }
+
+    return undefined;
   }
 }
 

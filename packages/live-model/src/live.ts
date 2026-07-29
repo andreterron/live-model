@@ -1,27 +1,22 @@
 import type {
   AbsentReason,
-  DefaultOperations,
   LiveState,
+  Operation,
   OperationArgs,
-  OperationDefinitions,
   OperationName,
-  OperationOf,
   OperationResult,
 } from '@live-model/protocol';
 import { Subscriber } from './reactivity/subscriber.js';
 import { Subscription } from './reactivity/subscription.js';
 
-export interface Live<
-  T,
-  OPS extends OperationDefinitions = DefaultOperations<T>
-> {
+export interface Live<T, OPS extends Operation = Operation> {
   get(): LiveState<T>;
   subscribe(subscriber: Subscriber<LiveState<T>>): Subscription;
 
   // Actions
 
   // TODO: `op()` can't always synchronously return a result
-  op(operation: OperationOf<OPS>): OperationResult;
+  op(operation: OPS): OperationResult;
   op<K extends OperationName<OPS>>(
     type: K,
     ...args: OperationArgs<OPS, K>
@@ -30,10 +25,8 @@ export interface Live<
   deleteValue(): void;
 }
 
-export abstract class BaseLive<
-  T,
-  OPS extends OperationDefinitions = DefaultOperations<T>
-> implements Live<T, OPS>
+export abstract class BaseLive<T, OPS extends Operation = Operation>
+  implements Live<T, OPS>
 {
   protected subscribers = new Set<Subscriber<LiveState<T>>>();
 
@@ -60,13 +53,13 @@ export abstract class BaseLive<
     this.subscribers.forEach((s) => s.next(liveState));
   }
 
-  op(operation: OperationOf<OPS>): OperationResult;
+  op(operation: OPS): OperationResult;
   op<K extends OperationName<OPS>>(
     type: K,
     ...args: OperationArgs<OPS, K>
   ): OperationResult;
   op(
-    operationOrType: OperationOf<OPS> | OperationName<OPS>,
+    operationOrType: OPS | OperationName<OPS>,
     ...args: unknown[]
   ): OperationResult {
     const operation = toOperation<OPS>(operationOrType, args);
@@ -93,11 +86,11 @@ export abstract class BaseLive<
   }
 
   setValue(value: T): void {
-    (this.op as any)('set_value', value);
+    this.op({ type: 'set_value', data: value } as OPS);
   }
 
   deleteValue(): void {
-    (this.op as any)('delete');
+    this.op({ type: 'delete' } as OPS);
   }
 
   abstract get(): LiveState<T>;
@@ -111,10 +104,10 @@ export abstract class BaseLive<
   }
 }
 
-export function toOperation<OPS extends OperationDefinitions>(
-  operationOrType: OperationOf<OPS> | OperationName<OPS>,
+export function toOperation<OPS extends Operation>(
+  operationOrType: OPS | OperationName<OPS>,
   args: readonly unknown[]
-): OperationOf<OPS> {
+): OPS {
   if (typeof operationOrType === 'object') {
     return operationOrType;
   }
@@ -123,7 +116,7 @@ export function toOperation<OPS extends OperationDefinitions>(
     args.length === 0
       ? { type: operationOrType }
       : { type: operationOrType, data: args[0] }
-  ) as OperationOf<OPS>;
+  ) as OPS;
 }
 
 /**

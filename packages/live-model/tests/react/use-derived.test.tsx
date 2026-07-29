@@ -83,10 +83,7 @@ describe('react useDerived', () => {
 
     const typedLive: Live<
       number,
-      {
-        increment: { data: number };
-        reset: object;
-      }
+      { type: 'increment'; data: number } | { type: 'reset' }
     > = result.current.live;
 
     act(() => {

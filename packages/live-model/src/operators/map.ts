@@ -1,20 +1,19 @@
 import type {
   LiveState,
+  Operation,
   OperationArgs,
-  OperationDefinitions,
+  OperationForName,
   OperationName,
-  OperationOf,
   OperationResult,
 } from '@live-model/protocol';
 import { BaseLive, Live, toOperation } from '../live.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';
 
-export type DerivedOperationHandlers<
-  Input,
-  OPS extends OperationDefinitions
-> = {
-  [K in OperationName<OPS>]: OPS[K] extends { data: infer Data }
+export type DerivedOperationHandlers<Input, OPS extends Operation> = {
+  [K in OperationName<OPS>]: OperationForName<OPS, K> extends {
+    data: infer Data;
+  }
     ? (source: Live<Input>, data: Data) => void
     : (source: Live<Input>) => void;
 };
@@ -26,9 +25,9 @@ export type DerivedOperationHandlerMap = Record<
 
 export type OperationsFromHandlers<H extends DerivedOperationHandlerMap> = {
   [K in keyof H & string]: Parameters<H[K]> extends [any, infer Data, ...any[]]
-    ? { data: Data }
-    : object;
-};
+    ? { type: K; data: Data }
+    : { type: K };
+}[keyof H & string];
 
 class MappedLive<
   T,
@@ -74,16 +73,14 @@ class MappedLive<
     };
   }
 
-  override op(
-    operation: OperationOf<OperationsFromHandlers<H>>
-  ): OperationResult;
+  override op(operation: OperationsFromHandlers<H>): OperationResult;
   override op<K extends OperationName<OperationsFromHandlers<H>>>(
     type: K,
     ...args: OperationArgs<OperationsFromHandlers<H>, K>
   ): OperationResult;
   override op(
     operationOrType:
-      | OperationOf<OperationsFromHandlers<H>>
+      | OperationsFromHandlers<H>
       | OperationName<OperationsFromHandlers<H>>,
     ...args: unknown[]
   ): OperationResult {
@@ -132,7 +129,7 @@ export function mapState<T, U, H extends DerivedOperationHandlerMap>(
 export function mapState<T, U>(
   live: Live<T>,
   transform: (state: LiveState<T>) => LiveState<U>
-): Live<U, Record<never, never>>;
+): Live<U, never>;
 export function mapState<T, U>(
   live: Live<T>,
   transform: (state: LiveState<T>) => LiveState<U>,
@@ -149,7 +146,7 @@ export function mapValue<T, U, H extends DerivedOperationHandlerMap>(
 export function mapValue<T, U>(
   live: Live<T>,
   transform: (v: T) => U
-): Live<U, Record<never, never>>;
+): Live<U, never>;
 export function mapValue<T, U>(
   live: Live<T>,
   transform: (v: T) => U,

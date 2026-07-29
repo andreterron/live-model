@@ -1,7 +1,4 @@
-import type {
-  DefaultOperations,
-  OperationDefinitions,
-} from '@live-model/protocol';
+import type { Operation } from '@live-model/protocol';
 import { Live } from '../live.js';
 
 export interface SubscribeHookReturn<T> {
@@ -12,10 +9,7 @@ export interface SubscribeHookReturn<T> {
   deleteValue: () => void;
 }
 
-export interface LiveHookReturn<
-  T,
-  OPS extends OperationDefinitions = DefaultOperations<T>
-> {
+export interface LiveHookReturn<T, OPS extends Operation = Operation> {
   live: Live<T, OPS>;
 
   value: T | undefined;

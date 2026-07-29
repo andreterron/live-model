@@ -1,4 +1,4 @@
-import { WebSocketTransport } from '../src/index.js';
+import { WebSocketQuerySource, WebSocketTransport } from '../src/index.js';
 
 class MockWebSocket extends EventTarget {
   static readonly CONNECTING = 0;
@@ -272,6 +272,92 @@ describe('WebSocketTransport', () => {
         kind: 'absent',
         reason: 'deleted',
       },
+    });
+  });
+
+  test('subscribes, routes snapshots, and unsubscribes entity queries', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const message = vi.fn();
+
+    const subscription = transport.query('recent-people', {}, { message });
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'query',
+        queryId: 'recent-people',
+        data_source: 'entities',
+        query: {},
+      })
+    );
+
+    const snapshot = {
+      type: 'query_snapshot',
+      queryId: 'recent-people',
+      items: [
+        {
+          key: 'people.1',
+          state: {
+            kind: 'value',
+            value: { name: 'Ada' },
+          },
+        },
+      ],
+      range: { hasMore: false },
+    };
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', { data: JSON.stringify(snapshot) })
+    );
+
+    expect(message).toHaveBeenCalledWith(snapshot);
+
+    subscription.unsubscribe();
+
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'unquery',
+        queryId: 'recent-people',
+      })
+    );
+  });
+
+  test('adapts remote queries to the shared QuerySource interface', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const source = new WebSocketQuerySource(transport);
+    const next = vi.fn();
+
+    source.query({}, { next });
+
+    const sentQuery = JSON.parse(
+      MockWebSocket.instances[0].send.mock.calls[0][0]
+    );
+    expect(sentQuery).toMatchObject({
+      type: 'query',
+      data_source: 'entities',
+      query: {},
+    });
+
+    const snapshot = {
+      type: 'query_snapshot',
+      queryId: sentQuery.queryId,
+      items: [
+        {
+          key: 'people.1',
+          state: { kind: 'value', value: { name: 'Ada' } },
+        },
+      ],
+      range: { hasMore: false },
+    };
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', { data: JSON.stringify(snapshot) })
+    );
+
+    expect(next).toHaveBeenCalledWith({
+      items: snapshot.items,
+      range: snapshot.range,
     });
   });
 });

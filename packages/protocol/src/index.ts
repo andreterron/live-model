@@ -108,6 +108,19 @@ export const unsubscribeMessageSchema = z.object({
   targets: z.any().optional(),
 });
 
+export const queryMessageSchema = z.object({
+  type: z.literal('query'),
+  queryId: z.string(),
+  data_source: z.literal('entities'),
+  // TODO: Define the query language.
+  query: z.any().refine((value) => value !== undefined, 'query is required'),
+});
+
+export const unqueryMessageSchema = z.object({
+  type: z.literal('unquery'),
+  queryId: z.string(),
+});
+
 export const stateMessageSchema = z.object({
   type: z.literal('state'),
   // TODO: Replace key with targets.
@@ -115,6 +128,21 @@ export const stateMessageSchema = z.object({
   state: liveStateSchema,
   // TODO: Define action targets.
   targets: z.any().optional(),
+});
+
+export const querySnapshotMessageSchema = z.object({
+  type: z.literal('query_snapshot'),
+  queryId: z.string(),
+  items: z.array(
+    z.object({
+      key: z.string(),
+      state: liveStateSchema,
+    })
+  ),
+  range: z.object({
+    hasMore: z.boolean(),
+    cursor: z.string().optional(),
+  }),
 });
 
 export const operationStatusMessageSchema = z.discriminatedUnion('status', [
@@ -133,10 +161,12 @@ export const operationStatusMessageSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
-export const operationSchema = z.discriminatedUnion('type', [
-  setValueOperationSchema,
-  deleteOperationSchema,
-]);
+export const operationSchema = z
+  .object({
+    type: z.string(),
+    data: z.any().optional(),
+  })
+  .passthrough();
 
 export const operationMessageSchema = z.object({
   type: z.literal('op'),
@@ -148,6 +178,8 @@ export const protocolMessageSchema = z.discriminatedUnion('type', [
   operationMessageSchema,
   subscribeMessageSchema,
   unsubscribeMessageSchema,
+  queryMessageSchema,
+  unqueryMessageSchema,
 ]);
 
 export interface Message {
@@ -161,6 +193,7 @@ export interface Message {
 
 export interface Operation {
   type: string;
+  data?: unknown;
 }
 
 /**
@@ -169,53 +202,59 @@ export interface Operation {
  */
 export type OperationDefinitions = Record<string, object>;
 
-export type DefaultOperations<T = unknown> = {
-  set_value: { data: T };
-  delete: object;
-};
+export type DefaultOperations<T = unknown> =
+  | { type: 'set_value'; data: T }
+  | { type: 'delete' };
 
-export type OperationName<OPS extends OperationDefinitions> = keyof OPS &
-  string;
+export type OperationName<OPS extends Operation> = OPS['type'];
+
+export type OperationForName<
+  OPS extends Operation,
+  K extends OperationName<OPS>
+> = OPS extends unknown ? (K extends OPS['type'] ? OPS : never) : never;
 
 export type OperationData<
-  OPS extends OperationDefinitions,
+  OPS extends Operation,
   K extends OperationName<OPS>
-> = OPS[K] extends { data: infer Data } ? Data : void;
+> = OperationForName<OPS, K> extends { data: infer Data } ? Data : void;
 
 export type OperationArgs<
-  OPS extends OperationDefinitions,
+  OPS extends Operation,
   K extends OperationName<OPS>
-> = OPS[K] extends { data: infer Data } ? [data: Data] : [];
+> = Operation extends OPS
+  ? [data?: unknown]
+  : OperationForName<OPS, K> extends { data: infer Data }
+  ? [data: Data]
+  : [];
 
 export type OperationOf<OPS extends OperationDefinitions> = {
-  [K in OperationName<OPS>]: OPS[K] extends { data: infer Data }
+  [K in keyof OPS & string]: OPS[K] extends { data: infer Data }
     ? { type: K; data: Data }
     : { type: K };
-}[OperationName<OPS>];
+}[keyof OPS & string];
 
-export type SetValueOperation<T = unknown> = OperationOf<
-  Pick<DefaultOperations<T>, 'set_value'>
+export type SetValueOperation<T = unknown> = Extract<
+  DefaultOperations<T>,
+  { type: 'set_value' }
 >;
 
-export type DeleteOperation = OperationOf<Pick<DefaultOperations, 'delete'>>;
+export type DeleteOperation = Extract<DefaultOperations, { type: 'delete' }>;
 
-/** @deprecated Prefer OperationOf<OPS> for a particular Live. */
-export type AnyOperation<T = unknown> = OperationOf<DefaultOperations<T>>;
+/** @deprecated Prefer a specific Operation union for a particular Live. */
+export type AnyOperation<T = unknown> = DefaultOperations<T>;
 
-// Zod 3 infers properties using z.any() as optional. The wire format still
-// requires data for set_value, so expose the schema with the protocol type.
 export const operationsSchema = z.array(operationSchema) as z.ZodType<
-  AnyOperation[]
+  Operation[]
 >;
 
 export const operationMessagesSchema = z.array(
   operationMessageSchema
 ) as z.ZodType<OperationMessage[]>;
 
-export interface OperationMessage<T = unknown> extends Message {
+export interface OperationMessage extends Message {
   type: 'op';
   key: string;
-  operation: AnyOperation<T>;
+  operation: Operation;
 }
 
 export interface OperationError {
@@ -244,14 +283,41 @@ export interface UnsubscribeMessage extends Message {
   targets?: any;
 }
 
-export type ProtocolMessage<T = unknown> =
-  | OperationMessage<T>
+export interface QueryMessage<Q = unknown> extends Message {
+  type: 'query';
+  queryId: string;
+  data_source: 'entities';
+  query: Q;
+}
+
+export interface UnqueryMessage extends Message {
+  type: 'unquery';
+  queryId: string;
+}
+
+export type ProtocolMessage =
+  | OperationMessage
   | SubscribeMessage
-  | UnsubscribeMessage;
+  | UnsubscribeMessage
+  | QueryMessage
+  | UnqueryMessage;
 
 export interface StateMessage<T = unknown> extends Message {
   type: 'state';
   key: string;
   state: LiveState<T>;
   targets?: any;
+}
+
+export interface QuerySnapshotMessage<T = unknown> extends Message {
+  type: 'query_snapshot';
+  queryId: string;
+  items: Array<{
+    key: string;
+    state: LiveState<T>;
+  }>;
+  range: {
+    hasMore: boolean;
+    cursor?: string;
+  };
 }

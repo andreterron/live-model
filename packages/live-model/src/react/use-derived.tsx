@@ -23,7 +23,7 @@ export function useDerived<T, U, H extends DerivedOperationHandlerMap>(
 export function useDerived<T, U>(
   live: Live<T>,
   transform: (state: LiveState<T>) => LiveState<U>
-): LiveHookReturn<U, Record<never, never>>;
+): LiveHookReturn<U, never>;
 export function useDerived<T, U>(
   live: Live<T>,
   transform: (state: LiveState<T>) => LiveState<U>,
@@ -57,7 +57,7 @@ export function useDerivedValue<T, U, H extends DerivedOperationHandlerMap>(
 export function useDerivedValue<T, U>(
   live: Live<T>,
   transform: (value: T) => U
-): LiveHookReturn<U, Record<never, never>>;
+): LiveHookReturn<U, never>;
 export function useDerivedValue<T, U>(
   live: Live<T>,
   transform: (value: T) => U,

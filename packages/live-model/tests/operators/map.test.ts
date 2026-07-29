@@ -96,10 +96,7 @@ describe('operator mapValue', () => {
 
     const typedLive: Live<
       number,
-      {
-        increment: { data: number };
-        reset: object;
-      }
+      { type: 'increment'; data: number } | { type: 'reset' }
     > = live;
     expect(typedLive).toBe(live);
 
