@@ -6,6 +6,8 @@ import {
   WebSocketTransport,
   type WebSocketTransportOptions,
 } from './creators/web-socket/web-socket-transport.js';
+import type { Live } from './live.js';
+import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
 
 export interface LiveModelClientOptions {
   websocketUrl?: string | URL;
@@ -14,7 +16,10 @@ export interface LiveModelClientOptions {
 }
 
 export class LiveModelClient {
-  private readonly livesByKey = new Map<string, WebSocketLive<unknown>>();
+  private readonly livesByKey = new Map<string, Live<unknown>>();
+  private readonly referenceCodec = new LiveReferenceCodec((key) =>
+    this.forKey(key)
+  );
   private transport?: WebSocketTransport;
   private options: LiveModelClientOptions;
 
@@ -33,19 +38,25 @@ export class LiveModelClient {
   forKey<T = unknown>(
     key: string,
     options?: Omit<WebSocketLiveOptions<T>, 'transport'>
-  ): WebSocketLive<T> {
+  ): Live<T> {
     let live = this.livesByKey.get(key);
 
     if (!live) {
-      live = new WebSocketLive<T>(key, {
+      const source = new WebSocketLive<unknown>(key, {
         ...options,
         // TODO: if this.transport changes, it won't update existing lives
         transport: this.getTransport(),
       });
+      live = new ReferenceResolvingLive<T>(source, this.referenceCodec);
       this.livesByKey.set(key, live);
+      this.referenceCodec.register(key, live);
     }
 
-    return live as WebSocketLive<T>;
+    return live as Live<T>;
+  }
+
+  encodeReferences(value: unknown): unknown {
+    return this.referenceCodec.encode(value);
   }
 
   clear(): void {

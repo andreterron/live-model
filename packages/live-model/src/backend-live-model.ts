@@ -13,6 +13,7 @@ import {
 import { BaseLive, type Live } from './live.js';
 import type { Subscriber } from './reactivity/subscriber.js';
 import type { Subscription } from './reactivity/subscription.js';
+import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
 
 export type BackendLiveFactory = <T>(key: string) => Live<T>;
 
@@ -84,12 +85,16 @@ export class BackendLiveModel {
   private readonly livesByKey = new Map<string, Live<unknown>>();
   private readonly allKeysLive: AllKeysLive;
   private readonly createLive: BackendLiveFactory;
+  private readonly referenceCodec = new LiveReferenceCodec((key) =>
+    this.forKey(key)
+  );
 
   constructor(
     private readonly storage: StorageAdapter,
     options: BackendLiveModelOptions = {}
   ) {
     this.allKeysLive = new AllKeysLive(storage);
+    this.referenceCodec.register(allKeysKey, this.allKeysLive);
     this.createLive =
       options.createLive ??
       (<T>(key: string) =>
@@ -107,11 +112,17 @@ export class BackendLiveModel {
     let live = this.livesByKey.get(key);
 
     if (!live) {
-      live = this.createLive<unknown>(key);
+      const source = this.createLive<unknown>(key);
+      live = new ReferenceResolvingLive(source, this.referenceCodec);
       this.livesByKey.set(key, live);
+      this.referenceCodec.register(key, live);
     }
 
     return live as Live<T>;
+  }
+
+  encodeReferences(value: unknown): unknown {
+    return this.referenceCodec.encode(value);
   }
 
   processOperation(key: string, operation: Operation): OperationStatusMessage {

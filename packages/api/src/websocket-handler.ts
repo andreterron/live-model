@@ -1,7 +1,9 @@
 import {
+  type LiveState,
   type OperationStatusMessage,
   type ProtocolMessage,
   type QuerySnapshotMessage,
+  type StateMessage,
   protocolMessageSchema,
 } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
@@ -41,10 +43,34 @@ export function createLiveModelWebSocket(
   // reference the operation so transports or clients can reconcile safely.
   let suppressedNotification: { peer: Peer; key: string } | undefined;
 
+  function encodeState(state: LiveState<unknown>): LiveState<unknown> {
+    if (state.kind !== 'value') {
+      return state;
+    }
+
+    return {
+      ...state,
+      value: liveModel.encodeReferences(state.value),
+    };
+  }
+
+  function send(peer: Peer, message: StateMessage | QuerySnapshotMessage) {
+    const encodedMessage =
+      message.type === 'state'
+        ? { ...message, state: encodeState(message.state) }
+        : {
+            ...message,
+            items: message.items.map((item) => ({
+              ...item,
+              state: encodeState(item.state),
+            })),
+          };
+
+    peer.send(JSON.stringify(encodedMessage));
+  }
+
   function sendState(peer: Peer, key: string) {
-    peer.send(
-      JSON.stringify({ type: 'state', key, state: liveModel.forKey(key).get() })
-    );
+    send(peer, { type: 'state', key, state: liveModel.forKey(key).get() });
   }
 
   function subscribePeer(peer: Peer, key: string) {
@@ -69,7 +95,7 @@ export function createLiveModelWebSocket(
           return;
         }
 
-        peer.send(JSON.stringify({ type: 'state', key, state }));
+        send(peer, { type: 'state', key, state });
       },
     });
     subscriptions.set(key, subscription);
@@ -121,7 +147,7 @@ export function createLiveModelWebSocket(
             queryId,
             ...result,
           };
-          peer.send(JSON.stringify(message));
+          send(peer, message);
         },
         error(error) {
           sendError(

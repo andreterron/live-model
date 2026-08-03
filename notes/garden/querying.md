@@ -20,6 +20,10 @@ An item can change without entering or leaving the query, while a change to an
 item can also alter membership or ordering. The protocol should make those
 cases distinguishable.
 
+## Dependencies for ideal implementation
+
+- [References](./references.md)
+
 ## Plan for next steps
 
 - [References](./references.md)

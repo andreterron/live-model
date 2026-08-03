@@ -36,5 +36,6 @@ export * from './react/use-subscribe.js';
 export * from './live.js';
 export * from './backend-live-model.js';
 export * from './live-model-client.js';
+export * from './references.js';
 export * from './setter.js';
 export * from './deleter.js';

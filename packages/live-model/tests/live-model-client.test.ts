@@ -1,4 +1,47 @@
-import { LiveModelClient, WebSocketTransport } from '../src/index.js';
+import {
+  liveReference,
+  LiveModelClient,
+  WebSocketTransport,
+  type Live,
+  type Operation,
+  type StateMessage,
+  type WebSocketTransportConnection,
+  type WebSocketTransportSubscriber,
+} from '../src/index.js';
+
+class ReferenceTestTransport extends WebSocketTransport {
+  readonly operations: Array<{ key: string; operation: Operation }> = [];
+  readonly subscribedKeys: string[] = [];
+  private readonly subscribers = new Map<
+    string,
+    WebSocketTransportSubscriber
+  >();
+
+  constructor() {
+    super('ws://live-model.test');
+  }
+
+  override subscribe(
+    key: string,
+    subscriber: WebSocketTransportSubscriber
+  ): WebSocketTransportConnection {
+    this.subscribedKeys.push(key);
+    this.subscribers.set(key, subscriber);
+
+    return {
+      send: (operation) => this.operations.push({ key, operation }),
+      unsubscribe: () => this.subscribers.delete(key),
+    };
+  }
+
+  emit(key: string, state: StateMessage['state']) {
+    this.subscribers.get(key)?.message({
+      type: 'state',
+      key,
+      state,
+    });
+  }
+}
 
 describe('LiveModelClient', () => {
   test('returns the same live for the same key', () => {
@@ -36,5 +79,79 @@ describe('LiveModelClient', () => {
     expect(() => client.forKey('people.1')).toThrow(
       'LiveModelClient requires a websocketUrl or transport'
     );
+  });
+
+  test('resolves remote references without subscribing to their targets', () => {
+    const transport = new ReferenceTestTransport();
+    const client = new LiveModelClient({ transport });
+    const post = client.forKey<{
+      author: Live<{ name: string }>;
+      reviewers: Array<Live<{ name: string }>>;
+    }>('posts.first');
+    post.subscribe({ next: vi.fn() });
+
+    transport.emit('posts.first', {
+      kind: 'value',
+      value: {
+        author: liveReference('people.ada'),
+        reviewers: [liveReference('people.ada')],
+      },
+    });
+
+    const state = post.get();
+    expect(state.kind).toBe('value');
+    if (state.kind !== 'value') {
+      return;
+    }
+
+    expect(state.value.author).toBe(client.forKey('people.ada'));
+    expect(state.value.reviewers[0]).toBe(state.value.author);
+    expect(transport.subscribedKeys).toEqual(['posts.first']);
+
+    state.value.author.subscribe({ next: vi.fn() });
+    expect(transport.subscribedKeys).toEqual(['posts.first', 'people.ada']);
+  });
+
+  test('encodes resolved Lives when a consumer writes a value back', () => {
+    const transport = new ReferenceTestTransport();
+    const client = new LiveModelClient({ transport });
+    const post = client.forKey<{
+      title: string;
+      author: Live<{ name: string }>;
+    }>('posts.first');
+    post.subscribe({ next: vi.fn() });
+    transport.emit('posts.first', {
+      kind: 'value',
+      value: {
+        title: 'Draft',
+        author: liveReference('people.ada'),
+      },
+    });
+
+    const state = post.get();
+    expect(state.kind).toBe('value');
+    if (state.kind !== 'value') {
+      return;
+    }
+
+    post.setValue({ ...state.value, title: 'Published' });
+
+    expect(transport.operations.at(-1)).toEqual({
+      key: 'posts.first',
+      operation: {
+        type: 'set_value',
+        data: {
+          title: 'Published',
+          author: liveReference('people.ada'),
+        },
+      },
+    });
+    expect(post.get()).toEqual({
+      kind: 'value',
+      value: {
+        title: 'Published',
+        author: client.forKey('people.ada'),
+      },
+    });
   });
 });

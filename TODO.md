@@ -1,3 +1,8 @@
+# Needs manual testing and review
+
+- References: Add an Explorer flow that can create, display, edit, and follow references, then manually review reference resolution and write-back behavior.
+- Queries: Add an Explorer query-testing surface, then manually review query subscription, result, and cancellation behavior.
+
 # Explorer UI
 
 - Move "Recents" storage from localStorage, into a backend-synced Live

@@ -1,4 +1,4 @@
-import type { ProtocolMessage } from '@live-model/protocol';
+import { liveReference, type ProtocolMessage } from '@live-model/protocol';
 import type { Message as WebSocketMessage, Peer } from 'crossws';
 import { BackendLiveModel } from 'live-model';
 import type { QuerySource, StorageAdapter } from 'live-model';
@@ -244,6 +244,46 @@ describe('createLiveModelWebSocket', () => {
       key: 'foo',
       state: { kind: 'value', value: { id: 'from-backend' } },
     });
+  });
+
+  test('sends resolved backend Lives as wire references', () => {
+    const liveModel = new BackendLiveModel(createStorage());
+    const author = liveModel.forKey('people.ada');
+    liveModel.forKey('posts.first').setValue({ author });
+    const websocket = createLiveModelWebSocket(liveModel, logger);
+    const subscriber = new TestPeer('subscriber');
+
+    websocket.message?.(
+      asPeer(subscriber),
+      createMessage({ type: 'subscribe', key: 'posts.first' })
+    );
+
+    expect(subscriber.sent).toEqual([
+      {
+        type: 'state',
+        key: 'posts.first',
+        state: {
+          kind: 'value',
+          value: { author: liveReference('people.ada') },
+        },
+      },
+    ]);
+  });
+
+  test('encodes references only within Live state values', () => {
+    const value = { id: 'foo' };
+    const liveModel = new BackendLiveModel(createStorage({ foo: value }));
+    const encodeReferences = vi.spyOn(liveModel, 'encodeReferences');
+    const websocket = createLiveModelWebSocket(liveModel, logger);
+    const subscriber = new TestPeer('subscriber');
+
+    websocket.message?.(
+      asPeer(subscriber),
+      createMessage({ type: 'subscribe', key: 'foo' })
+    );
+
+    expect(encodeReferences).toHaveBeenCalledOnce();
+    expect(encodeReferences).toHaveBeenCalledWith(value);
   });
 
   test('subscribes to entity query snapshots until unquery', () => {

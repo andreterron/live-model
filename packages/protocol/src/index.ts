@@ -2,6 +2,95 @@ import { z } from 'zod';
 
 export const allKeysKey = '_livemodel.all_keys';
 
+export interface LiveReference {
+  readonly $ref: string;
+}
+
+export interface LiveReferenceTarget {
+  readonly key: string;
+  readonly pointer?: string;
+}
+
+export function liveReference(key: string, pointer?: string): LiveReference {
+  if (pointer !== undefined && pointer !== '' && !pointer.startsWith('/')) {
+    throw new Error(
+      'A Live reference JSON Pointer must be empty or start with "/"'
+    );
+  }
+
+  const fragment =
+    pointer === undefined
+      ? ''
+      : `#${encodeURIComponent(pointer).replaceAll('%2F', '/')}`;
+
+  return Object.freeze({
+    $ref: `live:${encodeURIComponent(key)}${fragment}`,
+  });
+}
+
+/**
+ * Parses the reserved, exact `{ $ref: string }` shape.
+ *
+ * Returns undefined for ordinary application data and throws for a malformed
+ * reserved reference.
+ */
+export function parseLiveReference(
+  value: unknown
+): LiveReferenceTarget | undefined {
+  if (!isPlainObject(value) || Object.keys(value).length !== 1) {
+    return undefined;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(value, '$ref')) {
+    return undefined;
+  }
+
+  if (typeof value.$ref !== 'string') {
+    throw new Error('A Live reference must have a string "$ref"');
+  }
+
+  if (!value.$ref.startsWith('live:')) {
+    throw new Error('A Live reference must use the "live:" scheme');
+  }
+
+  const address = value.$ref.slice('live:'.length);
+  const fragmentIndex = address.indexOf('#');
+  const encodedKey =
+    fragmentIndex === -1 ? address : address.slice(0, fragmentIndex);
+  const encodedPointer =
+    fragmentIndex === -1 ? undefined : address.slice(fragmentIndex + 1);
+
+  let key: string;
+  let pointer: string | undefined;
+
+  try {
+    key = decodeURIComponent(encodedKey);
+    pointer =
+      encodedPointer === undefined
+        ? undefined
+        : decodeURIComponent(encodedPointer);
+  } catch {
+    throw new Error('A Live reference contains invalid URI encoding');
+  }
+
+  if (pointer !== undefined && pointer !== '' && !pointer.startsWith('/')) {
+    throw new Error(
+      'A Live reference JSON Pointer must be empty or start with "/"'
+    );
+  }
+
+  return pointer === undefined ? { key } : { key, pointer };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 export type AbsentReason =
   | 'not_found'
   | 'deleted'

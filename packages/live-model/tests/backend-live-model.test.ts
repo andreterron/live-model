@@ -1,6 +1,7 @@
-import { allKeysKey } from '@live-model/protocol';
+import { allKeysKey, liveReference } from '@live-model/protocol';
 import {
   BackendLiveModel,
+  type Live,
   type StorageAdapter,
 } from '../src/index.js';
 
@@ -80,5 +81,101 @@ describe('BackendLiveModel', () => {
     expect(
       liveModel.processOperation(allKeysKey, { type: 'delete' })
     ).toMatchObject({ status: 'error' });
+  });
+
+  test('resolves stored references to canonical lazy Lives', () => {
+    const storage = createStorage();
+    storage.set('people.ada', { name: 'Ada' });
+    storage.set('posts.first', {
+      author: liveReference('people.ada'),
+      reviewers: [liveReference('people.ada')],
+    });
+    const liveModel = new BackendLiveModel(storage);
+    const author = liveModel.forKey<{ name: string }>('people.ada');
+    const postState = liveModel
+      .forKey<{
+        author: Live<{ name: string }>;
+        reviewers: Array<Live<{ name: string }>>;
+      }>('posts.first')
+      .get();
+
+    expect(postState.kind).toBe('value');
+    if (postState.kind !== 'value') {
+      return;
+    }
+
+    expect(postState.value.author).toBe(author);
+    expect(postState.value.reviewers[0]).toBe(author);
+    expect(author.get()).toEqual({
+      kind: 'value',
+      value: { name: 'Ada' },
+    });
+  });
+
+  test('encodes canonical Lives before persistence and notifications', () => {
+    const storage = createStorage();
+    const liveModel = new BackendLiveModel(storage);
+    const author = liveModel.forKey<{ name: string }>('people.ada');
+    const post = liveModel.forKey<{
+      title: string;
+      author: Live<{ name: string }>;
+    }>('posts.first');
+    const states: unknown[] = [];
+    post.subscribe({ next: (state) => states.push(state) });
+
+    post.setValue({ title: 'Notes', author });
+
+    expect(storage.get('posts.first')).toEqual({
+      kind: 'value',
+      value: {
+        title: 'Notes',
+        author: liveReference('people.ada'),
+      },
+    });
+    expect(states.at(-1)).toEqual({
+      kind: 'value',
+      value: { title: 'Notes', author },
+    });
+  });
+
+  test('rejects Lives from another registry in operation data', () => {
+    const first = new BackendLiveModel(createStorage());
+    const second = new BackendLiveModel(createStorage());
+
+    expect(
+      first.forKey('container').op('set_value', {
+        target: second.forKey('target'),
+      })
+    ).toMatchObject({
+      status: 'error',
+      error: { code: 'invalid_reference' },
+    });
+  });
+
+  test('encodes references in custom operation data', () => {
+    const storage = createStorage();
+    const liveModel = new BackendLiveModel(storage, {
+      operationHandlers: {
+        attach(_currentState, operation) {
+          return {
+            status: 'success',
+            action: 'set',
+            value: operation.data,
+          };
+        },
+      },
+    });
+    const target = liveModel.forKey('people.ada');
+
+    expect(
+      liveModel.forKey('posts.first').op({
+        type: 'attach',
+        data: { author: target },
+      })
+    ).toEqual({ status: 'success' });
+    expect(storage.get('posts.first')).toEqual({
+      kind: 'value',
+      value: { author: liveReference('people.ada') },
+    });
   });
 });

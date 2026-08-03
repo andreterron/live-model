@@ -1,3 +1,5 @@
+import { liveReference } from '@live-model/protocol';
+import { BackendLiveModel, type Live } from 'live-model';
 import { SQLiteStorageAdapter } from '../src/storage-adapter/sqlite-storage-adapter.js';
 
 describe('SQLiteStorageAdapter', () => {
@@ -28,5 +30,25 @@ describe('SQLiteStorageAdapter', () => {
 
     expect(storage.set('foo', undefined)).toBe(false);
     expect(storage.listKeys()).toEqual([]);
+  });
+
+  test('keeps references materialized in SQLite while Lives resolve them', () => {
+    const storage = new SQLiteStorageAdapter(':memory:');
+    const liveModel = new BackendLiveModel(storage);
+    const author = liveModel.forKey<{ name: string }>('people.ada');
+    const post = liveModel.forKey<{ author: Live<{ name: string }> }>(
+      'posts.first'
+    );
+
+    post.setValue({ author });
+
+    expect(storage.get('posts.first')).toEqual({
+      kind: 'value',
+      value: { author: liveReference('people.ada') },
+    });
+    expect(post.get()).toEqual({
+      kind: 'value',
+      value: { author },
+    });
   });
 });
