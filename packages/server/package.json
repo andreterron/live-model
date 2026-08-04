@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "vite build",
-    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "dev": "PORT=${LIVE_MODEL_SERVER_PORT:-3001} tsx watch --clear-screen=false src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --build tsconfig.lib.json"
   },

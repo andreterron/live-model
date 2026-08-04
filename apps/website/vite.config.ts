@@ -6,9 +6,36 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/apps/website',
+  resolve: {
+    // `live-model` is a linked workspace package whose compiled entry imports
+    // React. Keep its hooks on the same React instance as this application.
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    // The tunnel can keep a browser tab alive while workspace packages rebuild.
+    // Discovering another dependency later changes Vite's browser hash, which can
+    // leave that tab running React and React DOM from different optimizer runs.
+    // React is the only CommonJS dependency that needs pre-bundling here; ESM
+    // dependencies can continue to load directly without late re-optimization.
+    noDiscovery: true,
+    include: [
+      'react',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'react-dom',
+      'react-dom/client',
+    ],
+  },
   server: {
-    port: 4200,
+    port: Number(process.env.PORT ?? 4200),
+    strictPort: process.env.PORT !== undefined,
     host: 'localhost',
+    // Every module is mutable while the workspace watch builds are running.
+    // In particular, /@fs package output must never retain Vite's default
+    // four-hour cache lifetime through the public tunnel.
+    headers: {
+      'Cache-Control': 'no-store',
+    },
   },
   preview: {
     port: 4300,
