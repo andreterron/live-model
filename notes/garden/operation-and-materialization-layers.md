@@ -4,6 +4,11 @@
 - Status: Growing
 - Confidence: Directional, with foundational decisions still open
 
+Update (2026-08-04): the existing protocol contracts have moved into
+`live-model`. The empty `@live-model/protocol` package skeleton remains reserved
+for future use. Package ownership references below describe the architecture at
+the time this note was planted; the conceptual questions remain open.
+
 ## Why this is in `garden`
 
 Possible names for notes that may range from early ideas to mature concepts:
@@ -38,8 +43,8 @@ command atomicity affect almost every public interface.
 
 ## Current motivation
 
-The main logic is currently mixed between `live-model` and
-`@live-model/protocol`:
+The main logic was mixed between `live-model` and `@live-model/protocol` when
+this note was planted:
 
 - `@live-model/protocol` contains operation definition types, current
   operation schemas, `LiveState`, operation results, and wire messages.
@@ -496,9 +501,9 @@ Only behavior-neutral work is justified before the foundational decisions:
 2. Add characterization tests around current operation routing, optimistic
    local application, synchronous result behavior, subscription fan-out, and
    SQLite persistence before moving ownership.
-3. Split `packages/protocol/src/index.ts` into internal files for state,
-   operation payload types, and wire messages while preserving all exports.
-   This reveals boundaries without choosing new packages.
+3. Keep state, operation payload types, and wire messages organized inside
+   `live-model` while preserving their public exports. This reveals boundaries
+   without choosing new packages.
 4. Introduce a transport interface that `WebSocketTransport` implements, then
    make transport construction a configuration concern rather than part of
    the `LiveModelClient` registry. This follows the existing decision to

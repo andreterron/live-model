@@ -1,4 +1,7 @@
-import { protocolMessageSchema, queryMessageSchema } from '../src/index.js';
+import {
+  protocolMessageSchema,
+  queryMessageSchema,
+} from '../../src/protocol.js';
 
 describe('query messages', () => {
   test('accepts an opaque query and its subscription ID', () => {

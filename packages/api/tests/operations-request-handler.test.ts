@@ -1,4 +1,4 @@
-import { allKeysKey } from '@live-model/protocol';
+import { allKeysKey } from 'live-model';
 import { BackendLiveModel } from 'live-model';
 import type { StorageAdapter } from 'live-model';
 import { createOperationsHandler } from '../src/operations-request-handler.js';

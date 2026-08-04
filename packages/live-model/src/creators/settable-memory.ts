@@ -1,4 +1,4 @@
-import type { LiveState } from '@live-model/protocol';
+import type { LiveState } from '../protocol.js';
 import { BaseLive } from '../live.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';

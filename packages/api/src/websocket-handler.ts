@@ -5,7 +5,7 @@ import {
   type QuerySnapshotMessage,
   type StateMessage,
   protocolMessageSchema,
-} from '@live-model/protocol';
+} from 'live-model';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
 import {
   EntitiesQuerySource,

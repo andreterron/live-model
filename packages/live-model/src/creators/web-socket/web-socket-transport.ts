@@ -6,7 +6,7 @@ import {
   type ProtocolMessage,
   type QuerySnapshotMessage,
   type StateMessage,
-} from '@live-model/protocol';
+} from '../../protocol.js';
 import type { Subscription } from '../../reactivity/subscription.js';
 
 export interface WebSocketTransportOptions {

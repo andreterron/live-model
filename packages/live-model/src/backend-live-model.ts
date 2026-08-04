@@ -4,7 +4,7 @@ import {
   type Operation,
   type OperationResult,
   type OperationStatusMessage,
-} from '@live-model/protocol';
+} from './protocol.js';
 import {
   StorageLive,
   type StorageAdapter,

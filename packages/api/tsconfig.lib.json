@@ -15,9 +15,6 @@
   "references": [
     {
       "path": "../live-model/tsconfig.lib.json"
-    },
-    {
-      "path": "../protocol/tsconfig.lib.json"
     }
   ],
   "exclude": [

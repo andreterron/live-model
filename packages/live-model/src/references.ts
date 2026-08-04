@@ -8,7 +8,7 @@ import {
   type OperationArgs,
   type OperationName,
   type OperationResult,
-} from '@live-model/protocol';
+} from './protocol.js';
 import type { Live } from './live.js';
 import { toOperation } from './live.js';
 import type { Subscriber } from './reactivity/subscriber.js';

@@ -1,4 +1,4 @@
-import { allKeysKey } from '@live-model/protocol';
+import { allKeysKey } from '../protocol.js';
 import type { BackendLiveModel } from '../backend-live-model.js';
 import type { Subscription } from '../reactivity/subscription.js';
 import type {

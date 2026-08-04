@@ -1,4 +1,4 @@
-import { operationMessagesSchema } from '@live-model/protocol';
+import { operationMessagesSchema } from 'live-model';
 import type { BackendLiveModel } from 'live-model';
 
 export function createOperationsHandler(liveModel: BackendLiveModel) {

@@ -1,4 +1,4 @@
-import { liveReference } from '@live-model/protocol';
+import { liveReference } from 'live-model';
 import { BackendLiveModel, type Live } from 'live-model';
 import { SQLiteStorageAdapter } from '../src/storage-adapter/sqlite-storage-adapter.js';
 

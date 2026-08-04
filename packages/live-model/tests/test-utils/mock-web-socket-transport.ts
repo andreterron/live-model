@@ -1,4 +1,4 @@
-import type { Operation, StateMessage } from '@live-model/protocol';
+import type { Operation, StateMessage } from '../../src/protocol.js';
 import { act } from '@testing-library/react';
 import {
   configureLiveModel,

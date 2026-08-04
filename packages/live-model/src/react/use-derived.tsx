@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { LiveState } from '@live-model/protocol';
+import type { LiveState } from '../protocol.js';
 import { Live } from '../live.js';
 import { LiveHookReturn } from './hook-types.js';
 import {

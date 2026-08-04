@@ -21,7 +21,6 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@live-model/protocol": "workspace:*",
     "crossws": "^0.4.6",
     "live-model": "workspace:*"
   },

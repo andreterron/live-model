@@ -1,4 +1,4 @@
-import type { LiveState } from '@live-model/protocol';
+import type { LiveState } from '../protocol.js';
 import type { Subscription } from '../reactivity/subscription.js';
 
 export interface QuerySourceItem<T = unknown> {

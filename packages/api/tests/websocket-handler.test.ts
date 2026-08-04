@@ -1,4 +1,4 @@
-import { liveReference, type ProtocolMessage } from '@live-model/protocol';
+import { liveReference, type ProtocolMessage } from 'live-model';
 import type { Message as WebSocketMessage, Peer } from 'crossws';
 import { BackendLiveModel } from 'live-model';
 import type { QuerySource, StorageAdapter } from 'live-model';

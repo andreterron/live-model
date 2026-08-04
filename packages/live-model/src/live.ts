@@ -5,7 +5,7 @@ import type {
   OperationArgs,
   OperationName,
   OperationResult,
-} from '@live-model/protocol';
+} from './protocol.js';
 import { Subscriber } from './reactivity/subscriber.js';
 import { Subscription } from './reactivity/subscription.js';
 

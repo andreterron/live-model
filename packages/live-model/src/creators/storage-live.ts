@@ -6,7 +6,7 @@ import {
   type OperationError,
   type OperationName,
   type OperationResult,
-} from '@live-model/protocol';
+} from '../protocol.js';
 import { BaseLive, toOperation } from '../live.js';
 import type { Subscriber } from '../reactivity/subscriber.js';
 import type { Subscription } from '../reactivity/subscription.js';

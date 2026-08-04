@@ -19,12 +19,9 @@
   ],
   "scripts": {
     "build": "vite build",
-    "test": "vitest",
+    "test": "vitest --passWithNoTests",
     "watch": "vite build --watch",
     "typecheck": "tsc --build tsconfig.lib.json"
-  },
-  "dependencies": {
-    "zod": "^3.24.3"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

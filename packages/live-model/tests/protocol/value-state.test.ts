@@ -1,4 +1,4 @@
-import { LiveState } from '../src/index.js';
+import { LiveState } from '../../src/protocol.js';
 
 describe('LiveState', () => {
   test('loading state is immutable', () => {

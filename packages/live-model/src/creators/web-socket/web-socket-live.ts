@@ -3,7 +3,7 @@ import {
   type DeleteOperation,
   type SetValueOperation,
   type StateMessage,
-} from '@live-model/protocol';
+} from '../../protocol.js';
 import { type ZodType } from 'zod';
 import { BaseLive } from '../../live.js';
 import { Subscriber } from '../../reactivity/subscriber.js';

@@ -1,4 +1,4 @@
-import { allKeysKey, liveReference } from '@live-model/protocol';
+import { allKeysKey, liveReference } from '../src/protocol.js';
 import {
   BackendLiveModel,
   type Live,

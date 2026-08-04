@@ -1,4 +1,4 @@
-import type { Operation } from '@live-model/protocol';
+import type { Operation } from '../protocol.js';
 import { Live } from '../live.js';
 
 export interface SubscribeHookReturn<T> {

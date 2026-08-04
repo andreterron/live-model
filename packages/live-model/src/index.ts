@@ -1,4 +1,4 @@
-export * from '@live-model/protocol';
+export * from './protocol.js';
 
 // Creators
 export * from './creators/settable-memory.js';

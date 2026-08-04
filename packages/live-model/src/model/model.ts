@@ -1,4 +1,4 @@
-import type { DefaultOperations } from '@live-model/protocol';
+import type { DefaultOperations } from '../protocol.js';
 import {
   defaultLiveModelClient,
   LiveModelClient,

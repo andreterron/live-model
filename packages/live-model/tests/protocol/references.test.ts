@@ -1,4 +1,4 @@
-import { liveReference, parseLiveReference } from '../src/index.js';
+import { liveReference, parseLiveReference } from '../../src/protocol.js';
 
 describe('Live references', () => {
   test('constructs and parses a reference to a registry key', () => {

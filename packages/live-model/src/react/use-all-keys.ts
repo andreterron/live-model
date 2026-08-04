@@ -1,4 +1,4 @@
-import { allKeysKey } from '@live-model/protocol';
+import { allKeysKey } from '../protocol.js';
 import { useLiveState } from './use-live-state.js';
 
 export function useAllKeys() {
