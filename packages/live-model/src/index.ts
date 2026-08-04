@@ -23,6 +23,10 @@ export type * from './reactivity/subscription.js';
 export * from './model/generate-id.js';
 export * from './model/model.js';
 
+// Types
+export * from './type-definition.js';
+export * from './types/array-type.js';
+
 // React
 export type * from './react/hook-types.js';
 export * from './react/use-derived.js';

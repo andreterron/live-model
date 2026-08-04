@@ -8,6 +8,11 @@
 > first step has moved to [Querying](querying.md), and the array-specific
 > runtime types and operations have been removed from the package.
 
+Update (2026-08-04): `live-model` now exports a definition-only `tArray` with
+an `insert` operation and a `buildArrayType(itemSchema)` factory. It has no
+reducer and is not assigned to a Live, so it does not yet reactivate the
+identity, ordering, or materialization design explored below.
+
 ## Current direction
 
 The first implementation will use ordinary `Live` values containing arrays

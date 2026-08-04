@@ -3,6 +3,23 @@
 - Date: 2026-07-24
 - Status: Current, revisitable
 
+## Amendment: reusable runtime type definitions
+
+On 2026-08-04, `buildType(name)` introduced reusable runtime operation
+definitions. Each operation now has its name, a Zod argument schema (an
+internal `z.undefined()` schema for argumentless operations), and an optional
+reducer. `OperationOfType<T>` derives the serialized operation union from the
+runtime definition.
+
+The fluent builder is itself the immutable definition. It has no terminal
+`.get()` step; future client registration can perform any additional build or
+indexing work.
+
+This is additive to the operation union used by `Live`; type definitions are
+not assigned to Lives yet. A missing reducer means reducing that operation
+returns the current state unchanged. The initial definition-only array type
+uses that behavior. See [Type definitions](../garden/type-definitions.md).
+
 ## Amendment: operation unions on `Live`
 
 On 2026-07-28, the second `Live<T, OPS>` parameter changed from an
