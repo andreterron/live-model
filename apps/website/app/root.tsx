@@ -2,11 +2,14 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
+  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from 'react-router';
 import { configureLiveModel } from 'live-model';
+import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
 
 import type { Route } from './+types/root';
 import './app.css';
@@ -53,7 +56,103 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-8">
+          <NavLink
+            to="/"
+            className="font-semibold tracking-tight"
+            onClick={() => setMobileNavigationOpen(false)}
+          >
+            Live Model
+          </NavLink>
+          <nav
+            className="hidden items-center gap-1 md:flex"
+            aria-label="Primary navigation"
+          >
+            <TopNavLink to="/" end>
+              State
+            </TopNavLink>
+            <TopNavLink to="/explore">Explorer</TopNavLink>
+            <TopNavLink to="/debugger">Message debugger</TopNavLink>
+          </nav>
+          <button
+            type="button"
+            className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            aria-controls="mobile-navigation"
+            aria-expanded={mobileNavigationOpen}
+            aria-label={
+              mobileNavigationOpen ? 'Close navigation' : 'Open navigation'
+            }
+            onClick={() => setMobileNavigationOpen((open) => !open)}
+          >
+            {mobileNavigationOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+        {mobileNavigationOpen && (
+          <nav
+            id="mobile-navigation"
+            className="border-t px-4 py-3 md:hidden"
+            aria-label="Mobile navigation"
+          >
+            <div className="mx-auto grid max-w-7xl gap-1">
+              <TopNavLink
+                to="/"
+                end
+                mobile
+                onClick={() => setMobileNavigationOpen(false)}
+              >
+                State
+              </TopNavLink>
+              <TopNavLink
+                to="/explore"
+                mobile
+                onClick={() => setMobileNavigationOpen(false)}
+              >
+                Explorer
+              </TopNavLink>
+              <TopNavLink
+                to="/debugger"
+                mobile
+                onClick={() => setMobileNavigationOpen(false)}
+              >
+                Message debugger
+              </TopNavLink>
+            </div>
+          </nav>
+        )}
+      </header>
+      <Outlet />
+    </div>
+  );
+}
+
+function TopNavLink({
+  children,
+  mobile = false,
+  ...props
+}: Omit<React.ComponentProps<typeof NavLink>, 'className'> & {
+  mobile?: boolean;
+}) {
+  return (
+    <NavLink
+      {...props}
+      className={({ isActive }) =>
+        `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+          mobile ? 'block w-full' : ''
+        } ${
+          isActive
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
