@@ -1,7 +1,7 @@
 # Type definitions
 
-- Status: Initial builder and reusable array definition implemented; assigning
-  a type to a Live remains intentionally deferred.
+- Status: Initial builder, reusable array definition, and root operation-set
+  assignment metadata implemented.
 - Package: `live-model`
 
 ## Direction
@@ -48,8 +48,28 @@ assignment remain separate design questions.
 
 ## Follow-up work
 
-The next step is to define how a type is assigned to an entity or to an entity
-property. That assignment is not part of the initial implementation.
+Operation-set assignments will be stored in Live metadata as registered
+operation-set IDs:
+
+```ts
+{
+  op_set: {
+    root: 'todo@1',
+  },
+}
+```
+
+Metadata is part of the same `LiveState` and history as the value. A core
+`set_metadata` operation updates it without changing the value. Value states
+always include metadata, absent states may retain it, and loading states do not
+have it. Definitions remain registered in code because schemas and reducers
+are not serializable.
+
+Property operation-set assignments are not supported yet. Properties are
+ordinary JSON fields whose changes become `set_value` on the root Live; they do
+not have independent operation histories. The possible `props` metadata field
+is left commented out in the source until property Lives have real identity and
+history semantics. See [Live metadata](./live-metadata.md).
 
 Reducer behavior and per-property history details remain open. They should not
 block making reducers optional in the initial API.

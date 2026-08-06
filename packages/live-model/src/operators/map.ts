@@ -1,4 +1,5 @@
 import type {
+  LiveMetadata,
   LiveState,
   Operation,
   OperationArgs,
@@ -88,6 +89,12 @@ class MappedLive<
       operationOrType,
       args
     );
+
+    if (operation.type === 'set_metadata' && 'data' in operation) {
+      this.live.setMetadata(operation.data as LiveMetadata);
+      return { status: 'success' };
+    }
+
     const handler = this.operationHandlers[operation.type];
 
     if (!handler) {

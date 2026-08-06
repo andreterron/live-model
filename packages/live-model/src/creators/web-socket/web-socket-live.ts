@@ -1,6 +1,9 @@
 import {
+  emptyLiveMetadata,
   LiveState,
   type DeleteOperation,
+  type LiveMetadata,
+  type SetMetadataOperation,
   type SetValueOperation,
   type StateMessage,
 } from '../../protocol.js';
@@ -58,14 +61,34 @@ export class WebSocketLive<T> extends BaseLive<T> {
   }
 
   protected override applySetValueOperation(value: T): void {
-    this.state = LiveState.value(value);
+    const metadata =
+      this.state.kind === 'loading'
+        ? emptyLiveMetadata
+        : this.state.metadata ?? emptyLiveMetadata;
+    this.state = LiveState.value(value, metadata);
     this.sendSetValue(value);
     this.notifyLiveState(this.state);
   }
 
   protected override applyDeleteOperation(): void {
-    this.state = LiveState.absent('deleted');
+    const metadata =
+      this.state.kind === 'loading' ? undefined : this.state.metadata;
+    this.state = LiveState.absent('deleted', undefined, metadata);
     this.sendDelete();
+    this.notifyLiveState(this.state);
+  }
+
+  protected override applySetMetadataOperation(metadata: LiveMetadata): void {
+    this.sendSetMetadata(metadata);
+
+    this.state =
+      this.state.kind === 'value'
+        ? LiveState.value(this.state.value, metadata)
+        : LiveState.absent(
+            this.state.kind === 'absent' ? this.state.reason : undefined,
+            this.state.kind === 'absent' ? this.state.error : undefined,
+            metadata
+          );
     this.notifyLiveState(this.state);
   }
 
@@ -82,6 +105,16 @@ export class WebSocketLive<T> extends BaseLive<T> {
   protected sendDelete() {
     const operation: DeleteOperation = {
       type: 'delete',
+    };
+
+    this.activateTransport();
+    this.transportConnection?.send(operation);
+  }
+
+  protected sendSetMetadata(data: LiveMetadata) {
+    const operation: SetMetadataOperation = {
+      type: 'set_metadata',
+      data,
     };
 
     this.activateTransport();
@@ -112,7 +145,7 @@ export class WebSocketLive<T> extends BaseLive<T> {
           ? this.options.validator.parse(message.state.value)
           : (message.state.value as T);
 
-        this.state = LiveState.value(value);
+        this.state = LiveState.value(value, message.state.metadata);
       } else {
         this.state = message.state;
       }
@@ -143,7 +176,12 @@ export class WebSocketLive<T> extends BaseLive<T> {
   protected notifyNonDestructiveError(error: unknown) {
     // NOTE: Adding websocket errors to the value might be overkill. But playing it safe
     if (this.state.kind === 'value') {
-      this.state = { kind: 'value', value: this.state.value, error };
+      this.state = {
+        kind: 'value',
+        value: this.state.value,
+        metadata: this.state.metadata,
+        error,
+      };
       this.notifyLiveState(this.state);
     } else if (this.state.kind === 'loading') {
       this.state = LiveState.absent('error', error);

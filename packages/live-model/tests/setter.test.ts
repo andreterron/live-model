@@ -6,7 +6,7 @@ describe('operation handler helpers', () => {
 
     setter.passthrough<number>()(source, 2);
 
-    expect(source.get()).toEqual({ kind: 'value', value: 2 });
+    expect(source.get()).toEqual({ kind: 'value', value: 2, metadata: {} });
   });
 
   test('creates a transforming set_value handler', () => {
@@ -14,7 +14,7 @@ describe('operation handler helpers', () => {
 
     setter.transform<number, string>(Number)(source, '2');
 
-    expect(source.get()).toEqual({ kind: 'value', value: 2 });
+    expect(source.get()).toEqual({ kind: 'value', value: 2, metadata: {} });
   });
 
   test('preserves a custom source-first set_value handler', () => {
@@ -34,6 +34,7 @@ describe('operation handler helpers', () => {
     expect(source.get()).toEqual({
       kind: 'absent',
       reason: 'deleted',
+      metadata: {},
     });
   });
 

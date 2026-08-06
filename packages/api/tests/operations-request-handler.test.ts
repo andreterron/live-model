@@ -5,10 +5,15 @@ import { createOperationsHandler } from '../src/operations-request-handler.js';
 
 function createStorage(initialValues: Record<string, unknown> = {}) {
   const values = new Map(Object.entries(initialValues));
+  const metadata = new Map<string, object>();
   const storage: StorageAdapter = {
     get(key) {
       return values.has(key)
-        ? { kind: 'value', value: values.get(key) }
+        ? {
+            kind: 'value',
+            value: values.get(key),
+            metadata: metadata.get(key) ?? {},
+          }
         : { kind: 'absent', reason: 'not_found' };
     },
     listKeys() {
@@ -16,6 +21,11 @@ function createStorage(initialValues: Record<string, unknown> = {}) {
     },
     set(key, data) {
       values.set(key, data);
+      return true;
+    },
+    setMetadata(key, value) {
+      if (!values.has(key)) return false;
+      metadata.set(key, value);
       return true;
     },
     delete(key) {

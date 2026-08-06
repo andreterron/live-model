@@ -16,7 +16,7 @@ export interface AnyLiveModelType extends LiveModelType {
 
 type FindOperationHandlers<T> = DerivedOperationHandlers<
   T[],
-  DefaultOperations<T | undefined>
+  Exclude<DefaultOperations<T | undefined>, { type: 'set_metadata' }>
 >;
 
 export class Model<T extends LiveModelType = AnyLiveModelType> {

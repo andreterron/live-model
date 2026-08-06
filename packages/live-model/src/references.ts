@@ -3,6 +3,7 @@ import {
   liveReference,
   parseLiveReference,
   type LiveReference,
+  type LiveMetadata,
   type LiveState as LiveStateType,
   type Operation,
   type OperationArgs,
@@ -167,6 +168,10 @@ export class ReferenceResolvingLive<T, OPS extends Operation = Operation>
     this.op({ type: 'delete' } as OPS);
   }
 
+  setMetadata(metadata: LiveMetadata): void {
+    this.source.setMetadata(metadata);
+  }
+
   private decodeState(state: LiveStateType<unknown>): LiveStateType<T> {
     if (state === this.lastSourceState && this.lastDecodedState) {
       return this.lastDecodedState;
@@ -183,7 +188,7 @@ export class ReferenceResolvingLive<T, OPS extends Operation = Operation>
           value: this.codec.decode(state.value) as T,
         };
       } catch (error) {
-        decodedState = LiveState.absent('error', error);
+        decodedState = LiveState.absent('error', error, state.metadata);
       }
     }
 

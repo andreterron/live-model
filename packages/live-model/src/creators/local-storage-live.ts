@@ -1,5 +1,10 @@
 import type { ZodType } from 'zod';
-import { LiveState } from '../protocol.js';
+import {
+  emptyLiveMetadata,
+  liveMetadataSchema,
+  LiveState,
+  type LiveMetadata,
+} from '../protocol.js';
 import { BaseLive } from '../live.js';
 import { Subscriber } from '../reactivity/subscriber.js';
 import { Subscription } from '../reactivity/subscription.js';
@@ -24,6 +29,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   // We store `lastSerializedValue: string | null` to compare with the existing
   // value in localStorage, which tells us if the value changed or not.
   protected lastSerializedValue: string | null = null;
+  protected lastSerializedMetadata: string | null = null;
   protected state: LiveState<T> = LiveState.loading;
   constructor(
     protected key: string,
@@ -38,20 +44,32 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   } {
     try {
       const serialized = localStorage.getItem(this.key);
-      if (serialized === this.lastSerializedValue) {
+      const serializedMetadata = localStorage.getItem(this.metadataKey);
+      if (
+        serialized === this.lastSerializedValue &&
+        serializedMetadata === this.lastSerializedMetadata
+      ) {
         return { state: this.state, changed: false };
       }
 
       this.lastSerializedValue = serialized;
+      this.lastSerializedMetadata = serializedMetadata;
+      const metadata = serializedMetadata
+        ? liveMetadataSchema.parse(JSON.parse(serializedMetadata))
+        : emptyLiveMetadata;
       if (!serialized) {
-        this.state = { kind: 'absent', reason: 'not_found' };
+        this.state = LiveState.absent(
+          'not_found',
+          undefined,
+          serializedMetadata ? metadata : undefined
+        );
         return { state: this.state, changed: true };
       }
 
       try {
         const deserialized = JSON.parse(serialized);
         if (!this.options.validator) {
-          this.state = { kind: 'value', value: deserialized };
+          this.state = LiveState.value(deserialized, metadata);
           return { state: this.state, changed: true };
         }
 
@@ -59,6 +77,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
         this.state = {
           kind: 'value',
           value: this.options.validator.parse(deserialized),
+          metadata,
         };
         return {
           state: this.state,
@@ -94,7 +113,7 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   }
 
   handleLocalStorageEvent = ((event: StorageEvent) => {
-    if (event.key === this.key) {
+    if (event.key === this.key || event.key === this.metadataKey) {
       const { state, changed } = this.readFromLocalStorage();
       if (changed) {
         this.notifyLiveState(state);
@@ -143,7 +162,11 @@ export class LocalStorageLive<T> extends BaseLive<T> {
 
   protected override applySetValueOperation(v: T) {
     try {
-      this.state = { kind: 'value', value: v };
+      const metadata =
+        this.state.kind === 'loading'
+          ? emptyLiveMetadata
+          : this.state.metadata ?? emptyLiveMetadata;
+      this.state = LiveState.value(v, metadata);
       // Save to localStorage before notifying subscribers. Other tabs might
       // get the update before the value propagates internally, but that's
       // better than a listener assuming that localStorage already has the
@@ -166,7 +189,9 @@ export class LocalStorageLive<T> extends BaseLive<T> {
   // NOTE: Copy-pasted from the setValue function above. Keep them in sync
   protected override applyDeleteOperation() {
     try {
-      this.state = { kind: 'absent', reason: 'deleted' };
+      const metadata =
+        this.state.kind === 'loading' ? undefined : this.state.metadata;
+      this.state = LiveState.absent('deleted', undefined, metadata);
       // Delete from localStorage before notifying subscribers. Other tabs might
       // get the update before the value propagates internally, but that's
       // better than a listener assuming that localStorage already has the
@@ -175,16 +200,42 @@ export class LocalStorageLive<T> extends BaseLive<T> {
       localStorage.removeItem(this.key);
 
       this.notifyLocalStorage();
-      this.notifyAbsence('deleted');
+      this.notifyLiveState(this.state);
     } catch (e) {
       console.error('Failed to delete value', { key: this.key }, e);
     }
   }
 
-  protected notifyLocalStorage() {
+  protected override applySetMetadataOperation(metadata: LiveMetadata): void {
+    try {
+      const serialized = JSON.stringify(metadata);
+      this.lastSerializedMetadata = serialized;
+      localStorage.setItem(this.metadataKey, serialized);
+
+      this.state =
+        this.state.kind === 'value'
+          ? LiveState.value(this.state.value, metadata)
+          : LiveState.absent(
+              this.state.kind === 'absent' ? this.state.reason : undefined,
+              this.state.kind === 'absent' ? this.state.error : undefined,
+              metadata
+            );
+      this.notifyLiveState(this.state);
+
+      this.notifyLocalStorage(this.metadataKey);
+    } catch (error) {
+      console.error('Failed to serialize metadata to localStorage', error);
+    }
+  }
+
+  protected notifyLocalStorage(key = this.key) {
     // From usehooks-ts: https://github.com/juliencrn/usehooks-ts/blob/61949134144d3690fe9f521260a16c779a6d3797/packages/usehooks-ts/src/useLocalStorage/useLocalStorage.ts#L140-L141
     // Using the same event name creates interoperability between the two libraries
     // We dispatch a custom event so every similar useLocalStorage hook is notified
-    window.dispatchEvent(new StorageEvent('local-storage', { key: this.key }));
+    window.dispatchEvent(new StorageEvent('local-storage', { key }));
+  }
+
+  private get metadataKey(): string {
+    return `${this.key}/$metadata`;
   }
 }

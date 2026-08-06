@@ -206,6 +206,7 @@ describe('WebSocketTransport', () => {
       state: {
         kind: 'value',
         value: { id: 'people.1' },
+        metadata: {},
       },
     };
 
@@ -241,6 +242,78 @@ describe('WebSocketTransport', () => {
       state: {
         kind: 'value',
         value: { id: 'people.1' },
+        metadata: {},
+      },
+    });
+  });
+
+  test('preserves known metadata when forwarding local value operations', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const sender = transport.subscribe('counter', { message: vi.fn() });
+    const receiverMessage = vi.fn();
+    transport.subscribe('counter', { message: receiverMessage });
+
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'state',
+          key: 'counter',
+          state: {
+            kind: 'value',
+            value: 1,
+            metadata: { op_set: { root: 'counter@1' } },
+          },
+        }),
+      })
+    );
+    receiverMessage.mockClear();
+
+    sender.send({ type: 'set_value', data: 2 });
+
+    expect(receiverMessage).toHaveBeenCalledWith({
+      type: 'state',
+      key: 'counter',
+      state: {
+        kind: 'value',
+        value: 2,
+        metadata: { op_set: { root: 'counter@1' } },
+      },
+    });
+  });
+
+  test('forwards local metadata operations without changing the value', () => {
+    const transport = new WebSocketTransport('ws://live-model.test', {
+      WebSocket: MockWebSocket as unknown as typeof WebSocket,
+    });
+    const sender = transport.subscribe('counter', { message: vi.fn() });
+    const receiverMessage = vi.fn();
+    transport.subscribe('counter', { message: receiverMessage });
+
+    MockWebSocket.instances[0].dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'state',
+          key: 'counter',
+          state: { kind: 'value', value: 1, metadata: {} },
+        }),
+      })
+    );
+    receiverMessage.mockClear();
+
+    sender.send({
+      type: 'set_metadata',
+      data: { op_set: { root: 'counter@1' } },
+    });
+
+    expect(receiverMessage).toHaveBeenCalledWith({
+      type: 'state',
+      key: 'counter',
+      state: {
+        kind: 'value',
+        value: 1,
+        metadata: { op_set: { root: 'counter@1' } },
       },
     });
   });
@@ -301,6 +374,7 @@ describe('WebSocketTransport', () => {
           state: {
             kind: 'value',
             value: { name: 'Ada' },
+            metadata: {},
           },
         },
       ],
@@ -346,7 +420,7 @@ describe('WebSocketTransport', () => {
       items: [
         {
           key: 'people.1',
-          state: { kind: 'value', value: { name: 'Ada' } },
+          state: { kind: 'value', value: { name: 'Ada' }, metadata: {} },
         },
       ],
       range: { hasMore: false },

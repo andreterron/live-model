@@ -15,6 +15,7 @@ describe('SQLiteStorageAdapter', () => {
     expect(storage.get('foo')).toEqual({
       kind: 'value',
       value: { count: 1 },
+      metadata: {},
     });
     expect(storage.listKeys()).toEqual(['bar', 'foo']);
 
@@ -32,6 +33,23 @@ describe('SQLiteStorageAdapter', () => {
     expect(storage.listKeys()).toEqual([]);
   });
 
+  test('stores metadata beside values and preserves it across value updates', () => {
+    const storage = new SQLiteStorageAdapter(':memory:');
+    storage.set('counter', 1);
+
+    expect(
+      storage.setMetadata('counter', {
+        op_set: { root: 'counter@1' },
+      })
+    ).toBe(true);
+    expect(storage.set('counter', 2)).toBe(true);
+    expect(storage.get('counter')).toEqual({
+      kind: 'value',
+      value: 2,
+      metadata: { op_set: { root: 'counter@1' } },
+    });
+  });
+
   test('keeps references materialized in SQLite while Lives resolve them', () => {
     const storage = new SQLiteStorageAdapter(':memory:');
     const liveModel = new BackendLiveModel(storage);
@@ -45,10 +63,12 @@ describe('SQLiteStorageAdapter', () => {
     expect(storage.get('posts.first')).toEqual({
       kind: 'value',
       value: { author: liveReference('people.ada') },
+      metadata: {},
     });
     expect(post.get()).toEqual({
       kind: 'value',
       value: { author },
+      metadata: {},
     });
   });
 });

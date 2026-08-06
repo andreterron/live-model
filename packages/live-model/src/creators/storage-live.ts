@@ -1,6 +1,9 @@
 import {
+  emptyLiveMetadata,
+  liveMetadataSchema,
   LiveState,
   type DefaultOperations,
+  type LiveMetadata,
   type Operation,
   type OperationArgs,
   type OperationError,
@@ -15,6 +18,7 @@ export interface StorageAdapter {
   get(key: string): LiveState<unknown>;
   listKeys(): string[];
   set(key: string, data: unknown): boolean;
+  setMetadata(key: string, metadata: LiveMetadata): boolean;
   delete(key: string): boolean;
 }
 
@@ -98,6 +102,19 @@ export class StorageLive<
     const currentState = this.storage.get(this.key);
     const existedBefore = currentState.kind === 'value';
 
+    if (operation.type === 'set_metadata') {
+      const parsed = liveMetadataSchema.safeParse(
+        'data' in operation ? operation.data : undefined
+      );
+      if (!parsed.success) {
+        return operationError(
+          'invalid_operation',
+          'set_metadata requires valid Live metadata'
+        );
+      }
+      return this.persistMetadata(parsed.data, currentState);
+    }
+
     const handler = this.operationHandlers[operation.type];
     if (!handler) {
       return operationError(
@@ -115,13 +132,20 @@ export class StorageLive<
       return this.persistDelete(existedBefore);
     }
 
-    return this.persistValue(result.value, existedBefore);
+    return this.persistValue(
+      result.value,
+      existedBefore,
+      currentState.kind === 'loading'
+        ? emptyLiveMetadata
+        : currentState.metadata ?? emptyLiveMetadata
+    );
   }
 
   // TODO: Remove persistValue. Logic should be on the operationHandler itself.
   private persistValue(
     value: unknown,
-    existedBefore: boolean
+    existedBefore: boolean,
+    metadata: LiveMetadata
   ): OperationResult {
     const persisted = this.storage.set(this.key, value);
 
@@ -132,12 +156,35 @@ export class StorageLive<
       );
     }
 
-    this.notifyLiveState(LiveState.value(value as T));
+    this.notifyLiveState(LiveState.value(value as T, metadata));
 
     if (!existedBefore) {
       this.options.onKeyMembershipChange?.();
     }
 
+    return { status: 'success' };
+  }
+
+  private persistMetadata(
+    metadata: LiveMetadata,
+    currentState: LiveState<unknown>
+  ): OperationResult {
+    if (!this.storage.setMetadata(this.key, metadata)) {
+      return operationError(
+        'operation_failed',
+        'Metadata could not be persisted'
+      );
+    }
+
+    const state =
+      currentState.kind === 'value'
+        ? LiveState.value(currentState.value as T, metadata)
+        : LiveState.absent(
+            currentState.kind === 'absent' ? currentState.reason : undefined,
+            currentState.kind === 'absent' ? currentState.error : undefined,
+            metadata
+          );
+    this.notifyLiveState(state);
     return { status: 'success' };
   }
 

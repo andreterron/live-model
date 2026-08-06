@@ -1,6 +1,7 @@
 import {
   BackendLiveModel,
   LiveState,
+  type LiveMetadata,
   type Operation,
   type OperationMessage,
   type OperationStatusMessage,
@@ -79,7 +80,25 @@ class DebuggerStorage implements StorageAdapter {
   }
 
   set(key: string, data: unknown): boolean {
-    this.values.set(key, LiveState.value(data));
+    const state = this.values.get(key);
+    const metadata =
+      state?.kind === 'loading' || !state ? undefined : state.metadata;
+    this.values.set(key, LiveState.value(data, metadata));
+    return true;
+  }
+
+  setMetadata(key: string, metadata: LiveMetadata): boolean {
+    const state = this.values.get(key);
+    if (!state || state.kind === 'loading') {
+      return false;
+    }
+
+    this.values.set(
+      key,
+      state.kind === 'value'
+        ? LiveState.value(state.value, metadata)
+        : LiveState.absent(state.reason, state.error, metadata)
+    );
     return true;
   }
 

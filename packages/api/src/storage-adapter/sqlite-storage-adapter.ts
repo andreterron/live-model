@@ -1,4 +1,4 @@
-import type { LiveState, StorageAdapter } from 'live-model';
+import type { LiveMetadata, LiveState, StorageAdapter } from 'live-model';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 
 export class SQLiteStorageAdapter implements StorageAdapter {
@@ -6,6 +6,7 @@ export class SQLiteStorageAdapter implements StorageAdapter {
   private readonly selectEntity: StatementSync;
   private readonly selectKeys: StatementSync;
   private readonly upsertEntity: StatementSync;
+  private readonly updateMetadata: StatementSync;
   private readonly deleteEntity: StatementSync;
 
   constructor(databasePath: string) {
@@ -14,12 +15,20 @@ export class SQLiteStorageAdapter implements StorageAdapter {
     this.database.exec(`
       CREATE TABLE IF NOT EXISTS entities (
         key TEXT PRIMARY KEY,
-        data TEXT NOT NULL
+        data TEXT NOT NULL,
+        metadata TEXT NOT NULL DEFAULT '{}'
       )
     `);
 
+    const columns = this.database.prepare('PRAGMA table_info(entities)').all();
+    if (!columns.some((column) => column.name === 'metadata')) {
+      this.database.exec(
+        `ALTER TABLE entities ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'`
+      );
+    }
+
     this.selectEntity = this.database.prepare(
-      'SELECT data FROM entities WHERE key = ?'
+      'SELECT data, metadata FROM entities WHERE key = ?'
     );
     // Temporary explorer support. The final API will not expose key listing,
     // so this intentionally uses a simple full-table key scan.
@@ -27,10 +36,13 @@ export class SQLiteStorageAdapter implements StorageAdapter {
       'SELECT key FROM entities ORDER BY key'
     );
     this.upsertEntity = this.database.prepare(`
-      INSERT INTO entities (key, data)
-      VALUES (?, ?)
+      INSERT INTO entities (key, data, metadata)
+      VALUES (?, ?, '{}')
       ON CONFLICT(key) DO UPDATE SET data = excluded.data
     `);
+    this.updateMetadata = this.database.prepare(
+      'UPDATE entities SET metadata = ? WHERE key = ?'
+    );
     this.deleteEntity = this.database.prepare(
       'DELETE FROM entities WHERE key = ?'
     );
@@ -43,9 +55,11 @@ export class SQLiteStorageAdapter implements StorageAdapter {
       return { kind: 'absent', reason: 'not_found' };
     }
 
+    const entity = row as { data: string; metadata: string };
     return {
       kind: 'value',
-      value: JSON.parse((row as { data: string }).data),
+      value: JSON.parse(entity.data),
+      metadata: JSON.parse(entity.metadata),
     };
   }
 
@@ -62,6 +76,15 @@ export class SQLiteStorageAdapter implements StorageAdapter {
 
     this.upsertEntity.run(key, data);
     return true;
+  }
+
+  setMetadata(key: string, metadata: LiveMetadata): boolean {
+    const serialized = JSON.stringify(metadata);
+    if (serialized === undefined) {
+      return false;
+    }
+
+    return this.updateMetadata.run(serialized, key).changes > 0;
   }
 
   delete(key: string): boolean {

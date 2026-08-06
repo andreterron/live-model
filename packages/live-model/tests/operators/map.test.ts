@@ -56,7 +56,11 @@ describe('operator mapValue', () => {
     source.setValue(2);
 
     // Verify
-    expect(next).toHaveBeenCalledExactlyOnceWith({ kind: 'value', value: 3 });
+    expect(next).toHaveBeenCalledExactlyOnceWith({
+      kind: 'value',
+      value: 3,
+      metadata: {},
+    });
 
     // Teardown
     sub.unsubscribe();
@@ -103,11 +107,11 @@ describe('operator mapValue', () => {
     expect(live.op({ type: 'increment', data: 2 })).toEqual({
       status: 'success',
     });
-    expect(live.get()).toEqual({ kind: 'value', value: 6 });
+    expect(live.get()).toEqual({ kind: 'value', value: 6, metadata: {} });
     expect(increment).toHaveBeenCalledWith(source, 2);
 
     expect(live.op('reset')).toEqual({ status: 'success' });
-    expect(live.get()).toEqual({ kind: 'value', value: 0 });
+    expect(live.get()).toEqual({ kind: 'value', value: 0, metadata: {} });
     expect(reset).toHaveBeenCalledWith(source);
   });
 
@@ -127,6 +131,7 @@ describe('operator mapValue', () => {
     expect(transform).toHaveBeenCalledExactlyOnceWith({
       kind: 'value',
       value: 1,
+      metadata: {},
     });
   });
 

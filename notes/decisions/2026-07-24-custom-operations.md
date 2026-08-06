@@ -3,6 +3,32 @@
 - Date: 2026-07-24
 - Status: Current, revisitable
 
+## Amendment: Live metadata is part of state
+
+On 2026-08-05, Live metadata became part of the same reactive state and
+history as its value. Value states require metadata, absent states may retain
+metadata, and loading states do not contain metadata:
+
+```ts
+type LiveState<T> = { kind: 'loading' } | { kind: 'absent'; reason?: AbsentReason; metadata?: LiveMetadata } | { kind: 'value'; value: T; metadata: LiveMetadata };
+```
+
+The core `set_metadata` operation replaces metadata without changing the
+value. It is recognized independently of custom operation handlers and is
+available through `live.setMetadata(metadata)`. `set_value` preserves existing
+metadata. Metadata stores registered operation-set IDs because runtime schemas
+and reducers are not serializable.
+
+Storage and wire snapshots carry value and metadata together so subscribers
+observe one atomic Live state. Authorization, compatibility validation,
+operation-set registration, and history dependencies remain deferred.
+
+Only root operation-set assignment is currently supported. Property fields are
+ordinary JSON fields updated through the root `set_value`, so `op_set.props` is
+deferred until properties have independent Live identities and histories. The
+complete rationale and persistence decisions are recorded in
+[Live metadata and operation-set assignment](./2026-08-06-live-metadata.md).
+
 ## Amendment: reusable runtime type definitions
 
 On 2026-08-04, `buildType(name)` introduced reusable runtime operation
@@ -192,9 +218,9 @@ TypeScript operation definitions disappear at runtime. Validation schemas,
 reducers, authorization, codecs, versions, and typed results may eventually
 extend operation definitions or use a separate runtime definition.
 
-The current protocol schemas still recognize only `set_value` and `delete`.
-Forwarding arbitrary custom operations over the wire will require a generic
-operation envelope or validation delegated to the addressed Live.
+The protocol now forwards a generic operation envelope. Runtime definitions
+can validate custom operation arguments once operation-set registration and
+assignment are connected to addressed Lives.
 
 ### Operations as durable source of truth
 

@@ -99,14 +99,28 @@ export type AbsentReason =
   | 'error';
 
 export type LiveStateLoading = Readonly<{ kind: 'loading' }>;
+export interface LiveMetadata {
+  readonly op_set?: Readonly<{
+    readonly root?: string;
+    // Property operation sets are deferred until properties are independently
+    // addressable Lives with their own operation histories. Today, changing a
+    // JSON field is represented as set_value on the root Live.
+    // readonly props?: Readonly<Record<string, string>>;
+  }>;
+}
+
+export const emptyLiveMetadata: Readonly<LiveMetadata> = Object.freeze({});
+
 export type LiveStateAbsent = Readonly<{
   kind: 'absent';
   reason?: AbsentReason;
   error?: unknown;
+  metadata?: LiveMetadata;
 }>;
 export type LiveStateValue<T> = Readonly<{
   kind: 'value';
   value: T;
+  metadata: LiveMetadata;
   error?: unknown;
 }>;
 
@@ -127,19 +141,31 @@ const cachedAbsentStates: Readonly<{
 
 export const LiveState = Object.freeze({
   loading: Object.freeze({ kind: 'loading' }) as LiveStateLoading,
-  value<T>(value: T): LiveStateValue<T> {
-    return Object.freeze({ kind: 'value', value });
+  value<T>(
+    value: T,
+    metadata: LiveMetadata = emptyLiveMetadata
+  ): LiveStateValue<T> {
+    return Object.freeze({ kind: 'value', value, metadata });
   },
-  absent(reason?: AbsentReason, error?: unknown): LiveStateAbsent {
-    if (!reason) {
+  absent(
+    reason?: AbsentReason,
+    error?: unknown,
+    metadata?: LiveMetadata
+  ): LiveStateAbsent {
+    if (metadata === undefined && reason === undefined) {
       return cachedAbsentStates['_'];
     }
 
-    if (reason !== 'error') {
+    if (metadata === undefined && reason !== undefined && reason !== 'error') {
       return cachedAbsentStates[reason];
     }
 
-    return Object.freeze({ kind: 'absent', reason, error });
+    return Object.freeze({
+      kind: 'absent',
+      reason,
+      ...(error === undefined ? {} : { error }),
+      ...(metadata === undefined ? {} : { metadata }),
+    });
   },
 });
 
@@ -147,6 +173,15 @@ export const LiveState = Object.freeze({
 // schema should yield the right types. Tricky because of generics.
 // Maybe remove generics from Messages
 // TODO: Update to zod 4
+
+export const liveMetadataSchema = z.object({
+  op_set: z
+    .object({
+      root: z.string().optional(),
+    })
+    .strict()
+    .optional(),
+});
 
 export const liveStateSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -164,10 +199,12 @@ export const liveStateSchema = z.discriminatedUnion('kind', [
       ])
       .optional(),
     error: z.any().optional(),
+    metadata: liveMetadataSchema.optional(),
   }),
   z.object({
     kind: z.literal('value'),
     value: z.any(),
+    metadata: liveMetadataSchema.default({}),
     error: z.any().optional(),
   }),
 ]);
@@ -179,6 +216,11 @@ export const setValueOperationSchema = z.object({
 
 export const deleteOperationSchema = z.object({
   type: z.literal('delete'),
+});
+
+export const setMetadataOperationSchema = z.object({
+  type: z.literal('set_metadata'),
+  data: liveMetadataSchema,
 });
 
 export const subscribeMessageSchema = z.object({
@@ -293,7 +335,8 @@ export type OperationDefinitions = Record<string, object>;
 
 export type DefaultOperations<T = unknown> =
   | { type: 'set_value'; data: T }
-  | { type: 'delete' };
+  | { type: 'delete' }
+  | { type: 'set_metadata'; data: LiveMetadata };
 
 export type OperationName<OPS extends Operation> = OPS['type'];
 
@@ -328,6 +371,11 @@ export type SetValueOperation<T = unknown> = Extract<
 >;
 
 export type DeleteOperation = Extract<DefaultOperations, { type: 'delete' }>;
+
+export type SetMetadataOperation = Extract<
+  DefaultOperations,
+  { type: 'set_metadata' }
+>;
 
 /** @deprecated Prefer a specific Operation union for a particular Live. */
 export type AnyOperation<T = unknown> = DefaultOperations<T>;

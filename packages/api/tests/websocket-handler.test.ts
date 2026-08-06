@@ -32,6 +32,7 @@ function createStorage(
   initialValues: Record<string, unknown> = {}
 ): StorageAdapter {
   const values = new Map(Object.entries(initialValues));
+  const metadata = new Map<string, object>();
 
   return {
     get(key) {
@@ -42,6 +43,7 @@ function createStorage(
       return {
         kind: 'value',
         value: values.get(key),
+        metadata: metadata.get(key) ?? {},
       };
     },
     listKeys() {
@@ -49,6 +51,11 @@ function createStorage(
     },
     set(key, data) {
       values.set(key, data);
+      return true;
+    },
+    setMetadata(key, value) {
+      if (!values.has(key)) return false;
+      metadata.set(key, value);
       return true;
     },
     delete(key) {
@@ -97,6 +104,7 @@ describe('createLiveModelWebSocket', () => {
         state: {
           kind: 'value',
           value: { id: 'foo' },
+          metadata: {},
         },
       },
       {
@@ -105,6 +113,7 @@ describe('createLiveModelWebSocket', () => {
         state: {
           kind: 'value',
           value: { id: 'foo' },
+          metadata: {},
         },
       },
     ]);
@@ -167,6 +176,7 @@ describe('createLiveModelWebSocket', () => {
         state: {
           kind: 'value',
           value: { id: 'foo' },
+          metadata: {},
         },
       },
     ]);
@@ -214,6 +224,7 @@ describe('createLiveModelWebSocket', () => {
       state: {
         kind: 'value',
         value: { id: 'foo' },
+        metadata: {},
       },
     });
     expect(barSubscriber.sent).toEqual([
@@ -242,7 +253,53 @@ describe('createLiveModelWebSocket', () => {
     expect(subscriber.sent[1]).toEqual({
       type: 'state',
       key: 'foo',
-      state: { kind: 'value', value: { id: 'from-backend' } },
+      state: {
+        kind: 'value',
+        value: { id: 'from-backend' },
+        metadata: {},
+      },
+    });
+  });
+
+  test('forwards metadata updates in the shared Live state', () => {
+    const liveModel = new BackendLiveModel(createStorage({ counter: 1 }));
+    const websocket = createLiveModelWebSocket(liveModel, logger);
+    const updater = new TestPeer('updater');
+    const subscriber = new TestPeer('subscriber');
+
+    websocket.message?.(
+      asPeer(updater),
+      createMessage({ type: 'subscribe', key: 'counter' })
+    );
+    websocket.message?.(
+      asPeer(subscriber),
+      createMessage({ type: 'subscribe', key: 'counter' })
+    );
+    websocket.message?.(
+      asPeer(updater),
+      createMessage({
+        type: 'op',
+        key: 'counter',
+        operation: {
+          type: 'set_metadata',
+          data: { op_set: { root: 'counter@1' } },
+        },
+      })
+    );
+
+    expect(subscriber.sent[subscriber.sent.length - 1]).toEqual({
+      type: 'state',
+      key: 'counter',
+      state: {
+        kind: 'value',
+        value: 1,
+        metadata: { op_set: { root: 'counter@1' } },
+      },
+    });
+    expect(liveModel.forKey('counter').get()).toEqual({
+      kind: 'value',
+      value: 1,
+      metadata: { op_set: { root: 'counter@1' } },
     });
   });
 
@@ -265,6 +322,7 @@ describe('createLiveModelWebSocket', () => {
         state: {
           kind: 'value',
           value: { author: liveReference('people.ada') },
+          metadata: {},
         },
       },
     ]);
@@ -313,6 +371,7 @@ describe('createLiveModelWebSocket', () => {
             state: {
               kind: 'value',
               value: { id: 'foo', count: 1 },
+              metadata: {},
             },
           },
         ],
@@ -329,6 +388,7 @@ describe('createLiveModelWebSocket', () => {
           state: {
             kind: 'value',
             value: { id: 'foo', count: 2 },
+            metadata: {},
           },
         },
       ],
@@ -368,7 +428,11 @@ describe('createLiveModelWebSocket', () => {
         items: [
           {
             key: 'external.1',
-            state: { kind: 'value', value: { source: 'external' } },
+            state: {
+              kind: 'value',
+              value: { source: 'external' } as never,
+              metadata: {},
+            },
           },
         ],
         range: { hasMore: false },
@@ -403,7 +467,11 @@ describe('createLiveModelWebSocket', () => {
         items: [
           {
             key: 'external.1',
-            state: { kind: 'value', value: { source: 'external' } },
+            state: {
+              kind: 'value',
+              value: { source: 'external' },
+              metadata: {},
+            },
           },
         ],
         range: { hasMore: false },

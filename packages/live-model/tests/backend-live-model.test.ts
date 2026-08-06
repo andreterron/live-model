@@ -7,11 +7,16 @@ import {
 
 function createStorage(): StorageAdapter {
   const values = new Map<string, unknown>();
+  const metadata = new Map<string, object>();
 
   return {
     get(key) {
       return values.has(key)
-        ? { kind: 'value', value: values.get(key) }
+        ? {
+            kind: 'value',
+            value: values.get(key),
+            metadata: metadata.get(key) ?? {},
+          }
         : { kind: 'absent', reason: 'not_found' };
     },
     listKeys() {
@@ -19,6 +24,11 @@ function createStorage(): StorageAdapter {
     },
     set(key, data) {
       values.set(key, data);
+      return true;
+    },
+    setMetadata(key, value) {
+      if (!values.has(key)) return false;
+      metadata.set(key, value);
       return true;
     },
     delete(key) {
@@ -48,7 +58,7 @@ describe('BackendLiveModel', () => {
 
     expect(states).toEqual([
       { kind: 'absent', reason: 'not_found' },
-      { kind: 'value', value: { count: 1 } },
+      { kind: 'value', value: { count: 1 }, metadata: {} },
       { kind: 'absent', reason: 'deleted' },
     ]);
     expect(storage.get('foo')).toEqual({
@@ -69,9 +79,9 @@ describe('BackendLiveModel', () => {
     liveModel.forKey('foo').deleteValue();
 
     expect(states).toEqual([
-      { kind: 'value', value: [] },
-      { kind: 'value', value: ['foo'] },
-      { kind: 'value', value: [] },
+      { kind: 'value', value: [], metadata: {} },
+      { kind: 'value', value: ['foo'], metadata: {} },
+      { kind: 'value', value: [], metadata: {} },
     ]);
   });
 
@@ -109,6 +119,7 @@ describe('BackendLiveModel', () => {
     expect(author.get()).toEqual({
       kind: 'value',
       value: { name: 'Ada' },
+      metadata: {},
     });
   });
 
@@ -127,14 +138,16 @@ describe('BackendLiveModel', () => {
 
     expect(storage.get('posts.first')).toEqual({
       kind: 'value',
+      metadata: {},
       value: {
         title: 'Notes',
         author: liveReference('people.ada'),
       },
     });
-    expect(states.at(-1)).toEqual({
+    expect(states[states.length - 1]).toEqual({
       kind: 'value',
       value: { title: 'Notes', author },
+      metadata: {},
     });
   });
 
@@ -176,6 +189,7 @@ describe('BackendLiveModel', () => {
     expect(storage.get('posts.first')).toEqual({
       kind: 'value',
       value: { author: liveReference('people.ada') },
+      metadata: {},
     });
   });
 });

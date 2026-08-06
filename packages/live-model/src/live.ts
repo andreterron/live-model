@@ -1,10 +1,16 @@
 import type {
   AbsentReason,
+  LiveMetadata,
   LiveState,
   Operation,
   OperationArgs,
   OperationName,
   OperationResult,
+} from './protocol.js';
+import {
+  emptyLiveMetadata,
+  LiveState as LiveStateFactory,
+  liveMetadataSchema,
 } from './protocol.js';
 import { Subscriber } from './reactivity/subscriber.js';
 import { Subscription } from './reactivity/subscription.js';
@@ -23,6 +29,7 @@ export interface Live<T, OPS extends Operation = Operation> {
   ): OperationResult;
   setValue(value: T): void;
   deleteValue(): void;
+  setMetadata(metadata: LiveMetadata): void;
 }
 
 export abstract class BaseLive<T, OPS extends Operation = Operation>
@@ -41,11 +48,19 @@ export abstract class BaseLive<T, OPS extends Operation = Operation>
   }
 
   protected notifySubscribers(v: T) {
-    this.subscribers.forEach((s) => s.next({ value: v, kind: 'value' }));
+    const currentState = this.get();
+    const metadata =
+      currentState.kind === 'loading'
+        ? emptyLiveMetadata
+        : currentState.metadata ?? emptyLiveMetadata;
+    this.notifyLiveState({ value: v, kind: 'value', metadata });
   }
 
   protected notifyAbsence(reason?: AbsentReason) {
-    this.subscribers.forEach((s) => s.next({ kind: 'absent', reason }));
+    const currentState = this.get();
+    const metadata =
+      currentState.kind === 'loading' ? undefined : currentState.metadata;
+    this.notifyLiveState(LiveStateFactory.absent(reason, undefined, metadata));
   }
 
   protected notifyLiveState(liveState: LiveState<T>) {
@@ -76,6 +91,25 @@ export abstract class BaseLive<T, OPS extends Operation = Operation>
       return { status: 'success' };
     }
 
+    if (operation.type === 'set_metadata') {
+      const parsed = liveMetadataSchema.safeParse(
+        'data' in operation ? operation.data : undefined
+      );
+      if (!parsed.success) {
+        return {
+          status: 'error',
+          error: {
+            code: 'invalid_operation',
+            message: 'set_metadata requires valid Live metadata',
+            details: parsed.error.flatten(),
+          },
+        };
+      }
+
+      this.applySetMetadataOperation(parsed.data);
+      return { status: 'success' };
+    }
+
     return {
       status: 'error',
       error: {
@@ -93,6 +127,10 @@ export abstract class BaseLive<T, OPS extends Operation = Operation>
     this.op({ type: 'delete' } as OPS);
   }
 
+  setMetadata(metadata: LiveMetadata): void {
+    this.op({ type: 'set_metadata', data: metadata } as OPS);
+  }
+
   abstract get(): LiveState<T>;
 
   protected applySetValueOperation(value: T): void {
@@ -101,6 +139,10 @@ export abstract class BaseLive<T, OPS extends Operation = Operation>
 
   protected applyDeleteOperation(): void {
     throw new Error('delete is not supported by this Live');
+  }
+
+  protected applySetMetadataOperation(_metadata: LiveMetadata): void {
+    throw new Error('set_metadata is not supported by this Live');
   }
 }
 

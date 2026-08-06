@@ -16,6 +16,7 @@ type Connection = WebSocketTransportConnection & {
 
 class MockWebSocketTransport extends WebSocketTransport {
   private values = new Map<string, unknown>();
+  private metadata = new Map<string, object>();
   private connectionsByKey = new Map<string, Set<Connection>>();
 
   constructor(initialValues: Record<string, unknown>) {
@@ -67,6 +68,7 @@ class MockWebSocketTransport extends WebSocketTransport {
           ? {
               kind: 'value',
               value: this.values.get(key),
+              metadata: this.metadata.get(key) ?? {},
             }
           : {
               kind: 'absent',
@@ -92,6 +94,11 @@ class MockWebSocketTransport extends WebSocketTransport {
 
     if (message.type === 'delete') {
       this.values.delete(key);
+      return;
+    }
+
+    if (message.type === 'set_metadata') {
+      this.metadata.set(key, message.data as object);
     }
   }
 
@@ -128,6 +135,7 @@ class MockWebSocketTransport extends WebSocketTransport {
         state: {
           kind: 'value',
           value: message.data,
+          metadata: this.metadata.get(key) ?? {},
         },
       };
     }

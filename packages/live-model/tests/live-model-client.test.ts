@@ -92,6 +92,7 @@ describe('LiveModelClient', () => {
 
     transport.emit('posts.first', {
       kind: 'value',
+      metadata: {},
       value: {
         author: liveReference('people.ada'),
         reviewers: [liveReference('people.ada')],
@@ -122,6 +123,7 @@ describe('LiveModelClient', () => {
     post.subscribe({ next: vi.fn() });
     transport.emit('posts.first', {
       kind: 'value',
+      metadata: {},
       value: {
         title: 'Draft',
         author: liveReference('people.ada'),
@@ -136,7 +138,7 @@ describe('LiveModelClient', () => {
 
     post.setValue({ ...state.value, title: 'Published' });
 
-    expect(transport.operations.at(-1)).toEqual({
+    expect(transport.operations[transport.operations.length - 1]).toEqual({
       key: 'posts.first',
       operation: {
         type: 'set_value',
@@ -148,10 +150,38 @@ describe('LiveModelClient', () => {
     });
     expect(post.get()).toEqual({
       kind: 'value',
+      metadata: {},
       value: {
         title: 'Published',
         author: client.forKey('people.ada'),
       },
+    });
+  });
+
+  test('sends metadata operations without changing the value', () => {
+    const transport = new ReferenceTestTransport();
+    const client = new LiveModelClient({ transport });
+    const live = client.forKey<number>('counter');
+    live.subscribe({ next: vi.fn() });
+    transport.emit('counter', {
+      kind: 'value',
+      value: 1,
+      metadata: {},
+    });
+
+    live.setMetadata({ op_set: { root: 'counter@1' } });
+
+    expect(transport.operations[transport.operations.length - 1]).toEqual({
+      key: 'counter',
+      operation: {
+        type: 'set_metadata',
+        data: { op_set: { root: 'counter@1' } },
+      },
+    });
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 1,
+      metadata: { op_set: { root: 'counter@1' } },
     });
   });
 });

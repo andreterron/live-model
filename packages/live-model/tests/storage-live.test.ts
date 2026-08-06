@@ -6,11 +6,16 @@ import {
 
 function createStorage(): StorageAdapter {
   const values = new Map<string, unknown>();
+  const metadata = new Map<string, object>();
 
   return {
     get(key) {
       return values.has(key)
-        ? { kind: 'value', value: values.get(key) }
+        ? {
+            kind: 'value',
+            value: values.get(key),
+            metadata: metadata.get(key) ?? {},
+          }
         : { kind: 'absent', reason: 'not_found' };
     },
     listKeys() {
@@ -18,6 +23,11 @@ function createStorage(): StorageAdapter {
     },
     set(key, data) {
       values.set(key, data);
+      return true;
+    },
+    setMetadata(key, value) {
+      if (!values.has(key)) return false;
+      metadata.set(key, value);
       return true;
     },
     delete(key) {
@@ -40,10 +50,11 @@ describe('StorageLive', () => {
     expect(storage.get('counter')).toEqual({
       kind: 'value',
       value: { count: 1 },
+      metadata: {},
     });
     expect(states).toEqual([
       { kind: 'absent', reason: 'not_found' },
-      { kind: 'value', value: { count: 1 } },
+      { kind: 'value', value: { count: 1 }, metadata: {} },
     ]);
   });
 
@@ -105,10 +116,12 @@ describe('StorageLive', () => {
     expect(storage.get('items')).toEqual({
       kind: 'value',
       value: ['first', 'second'],
+      metadata: {},
     });
     expect(states[states.length - 1]).toEqual({
       kind: 'value',
       value: ['first', 'second'],
+      metadata: {},
     });
   });
 
@@ -124,6 +137,25 @@ describe('StorageLive', () => {
     expect(storage.get('items')).toEqual({
       kind: 'value',
       value: ['first'],
+      metadata: {},
+    });
+  });
+
+  test('always supports persisted metadata updates', () => {
+    const storage = createStorage();
+    storage.set('counter', 1);
+    const live = new StorageLive<number, { type: 'increment'; data: number }>(
+      'counter',
+      storage,
+      { operationHandlers: {} }
+    );
+
+    live.setMetadata({ op_set: { root: 'counter@1' } });
+
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 1,
+      metadata: { op_set: { root: 'counter@1' } },
     });
   });
 });

@@ -1,7 +1,10 @@
 import {
+  emptyLiveMetadata,
+  liveMetadataSchema,
   operationMessageSchema,
   querySnapshotMessageSchema,
   stateMessageSchema,
+  type LiveState,
   type Operation,
   type ProtocolMessage,
   type QuerySnapshotMessage,
@@ -56,6 +59,7 @@ export class WebSocketTransport {
     ReturnType<typeof setTimeout>
   >();
   protected querySubscribersById = new Map<string, WebSocketQuerySubscriber>();
+  protected stateByKey = new Map<string, LiveState<unknown>>();
 
   constructor(
     protected url: string | URL,
@@ -303,9 +307,13 @@ export class WebSocketTransport {
 
     switch (message.type) {
       case 'query_snapshot':
+        for (const item of message.items) {
+          this.stateByKey.set(item.key, item.state);
+        }
         this.querySubscribersById.get(message.queryId)?.message(message);
         break;
       case 'state': {
+        this.stateByKey.set(message.key, message.state);
         const connections = this.subscribersByKey.get(message.key);
 
         if (connections) {
@@ -397,26 +405,64 @@ export class WebSocketTransport {
     key: string,
     operation: Operation
   ): StateMessage | undefined {
+    const currentState = this.stateByKey.get(key);
+
     if (operation.type === 'set_value') {
-      return {
+      const message: StateMessage = {
         type: 'state',
         key,
         state: {
           kind: 'value',
           value: operation.data,
+          metadata:
+            currentState?.kind === 'loading' || !currentState
+              ? emptyLiveMetadata
+              : currentState.metadata ?? emptyLiveMetadata,
         },
       };
+      this.stateByKey.set(key, message.state);
+      return message;
     }
 
     if (operation.type === 'delete') {
-      return {
+      const message: StateMessage = {
         type: 'state',
         key,
         state: {
           kind: 'absent',
           reason: 'deleted',
+          ...(currentState?.kind !== 'loading' && currentState?.metadata
+            ? { metadata: currentState.metadata }
+            : {}),
         },
       };
+      this.stateByKey.set(key, message.state);
+      return message;
+    }
+
+    if (operation.type === 'set_metadata') {
+      const parsed = liveMetadataSchema.safeParse(operation.data);
+      if (!parsed.success) {
+        return undefined;
+      }
+
+      const state: LiveState<unknown> =
+        currentState?.kind === 'value'
+          ? { ...currentState, metadata: parsed.data }
+          : {
+              kind: 'absent',
+              ...(currentState?.kind === 'absent' && currentState.reason
+                ? { reason: currentState.reason }
+                : {}),
+              ...(currentState?.kind === 'absent' &&
+              currentState.error !== undefined
+                ? { error: currentState.error }
+                : {}),
+              metadata: parsed.data,
+            };
+      const message: StateMessage = { type: 'state', key, state };
+      this.stateByKey.set(key, state);
+      return message;
     }
 
     return undefined;
