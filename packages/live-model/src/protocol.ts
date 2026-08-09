@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  operationSchema,
+  type Message,
+  type Operation,
+} from '@live-model/causality';
+
+export * from '@live-model/causality';
 
 export const allKeysKey = '_livemodel.all_keys';
 
@@ -276,29 +283,6 @@ export const querySnapshotMessageSchema = z.object({
   }),
 });
 
-export const operationStatusMessageSchema = z.discriminatedUnion('status', [
-  z.object({
-    type: z.literal('op_status'),
-    status: z.literal('success'),
-  }),
-  z.object({
-    type: z.literal('op_status'),
-    status: z.literal('error'),
-    error: z.object({
-      code: z.string(),
-      message: z.string().optional(),
-      details: z.any().optional(),
-    }),
-  }),
-]);
-
-export const operationSchema = z
-  .object({
-    type: z.string(),
-    data: z.any().optional(),
-  })
-  .passthrough();
-
 export const operationMessageSchema = z.object({
   type: z.literal('op'),
   key: z.string(),
@@ -313,57 +297,10 @@ export const protocolMessageSchema = z.discriminatedUnion('type', [
   unqueryMessageSchema,
 ]);
 
-export interface Message {
-  // clientId: string;
-  // clientTimestamp: string;
-  type: string;
-  // eventId: string;
-  // TODO: Define action dependencies.
-  // dependencies: any;
-}
-
-export interface Operation {
-  type: string;
-  data?: unknown;
-}
-
-/**
- * Describes the operations supported by a Live. Definition objects deliberately
- * have room for future metadata in addition to their argument type.
- */
-export type OperationDefinitions = Record<string, object>;
-
 export type DefaultOperations<T = unknown> =
   | { type: 'set_value'; data: T }
   | { type: 'delete' }
   | { type: 'set_metadata'; data: LiveMetadata };
-
-export type OperationName<OPS extends Operation> = OPS['type'];
-
-export type OperationForName<
-  OPS extends Operation,
-  K extends OperationName<OPS>
-> = OPS extends unknown ? (K extends OPS['type'] ? OPS : never) : never;
-
-export type OperationData<
-  OPS extends Operation,
-  K extends OperationName<OPS>
-> = OperationForName<OPS, K> extends { data: infer Data } ? Data : void;
-
-export type OperationArgs<
-  OPS extends Operation,
-  K extends OperationName<OPS>
-> = Operation extends OPS
-  ? [data?: unknown]
-  : OperationForName<OPS, K> extends { data: infer Data }
-  ? [data: Data]
-  : [];
-
-export type OperationOf<OPS extends OperationDefinitions> = {
-  [K in keyof OPS & string]: OPS[K] extends { data: infer Data }
-    ? { type: K; data: Data }
-    : { type: K };
-}[keyof OPS & string];
 
 export type SetValueOperation<T = unknown> = Extract<
   DefaultOperations<T>,
@@ -380,10 +317,6 @@ export type SetMetadataOperation = Extract<
 /** @deprecated Prefer a specific Operation union for a particular Live. */
 export type AnyOperation<T = unknown> = DefaultOperations<T>;
 
-export const operationsSchema = z.array(operationSchema) as z.ZodType<
-  Operation[]
->;
-
 export const operationMessagesSchema = z.array(
   operationMessageSchema
 ) as z.ZodType<OperationMessage[]>;
@@ -393,20 +326,6 @@ export interface OperationMessage extends Message {
   key: string;
   operation: Operation;
 }
-
-export interface OperationError {
-  code: string;
-  message?: string;
-  details?: unknown;
-}
-
-export type OperationResult =
-  | { status: 'success' }
-  | { status: 'error'; error: OperationError };
-
-export type OperationStatusMessage = Message & {
-  type: 'op_status';
-} & OperationResult;
 
 export interface SubscribeMessage extends Message {
   type: 'subscribe';

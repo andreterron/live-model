@@ -47,7 +47,7 @@
     },
     {
       "plugin": "@nx/vite/plugin",
-      "exclude": ["packages/protocol/**", "packages/explorer/**"],
+      "exclude": ["packages/explorer/**"],
       "options": {
         "buildTargetName": "build",
         "testTargetName": "test",
