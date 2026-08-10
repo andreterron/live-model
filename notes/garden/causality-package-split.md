@@ -1,21 +1,18 @@
 # Causality package split
 
 - Date planted: 2026-08-06
-- Status: First package boundary implemented
-- Confidence: Directional; responsibility boundaries are being mapped
+- Status: Paused; possible future package split
+- Confidence: Exploratory; responsibilities were mapped but not extracted
 
-Update (2026-08-07): the empty `@live-model/protocol` package was renamed to
-`@live-model/causality`. The initial behavior-preserving split moves generic
-operation envelopes, operation type utilities, and operation results. Live
-state, key-addressed and query messages, materialization, and WebSocket sync
-remain in `live-model`. Checkpoints and configurable causal mechanisms remain
-notes only.
+Update (2026-08-10): this package split is not implemented. The contracts and
+behavior remain in `live-model`. This note preserves the discussion in case a
+smaller package boundary becomes useful later; it does not describe the current
+package structure.
 
-External consumers should normally import causality contracts through
-`live-model`, which re-exports them. Direct imports are reserved for lower-level
-packages that intentionally depend on causality without depending on
-`live-model`. The website and the other current workspace consumers use the
-`live-model` entry point.
+If the split is revisited, external consumers should normally continue to
+import through `live-model`, which can re-export lower-level contracts. Direct
+imports would be reserved for packages that intentionally depend on causality
+without depending on the rest of `live-model`.
 
 ## Motivation
 
@@ -88,22 +85,21 @@ async (operation, ...) => string[]
 
 The inventory describes responsibilities rather than proposed files. Existing
 files are listed only to show where each responsibility is represented today;
-files and classes may be split during the refactor.
+files and classes could be split if the refactor is revisited.
 
 ### Message contracts
 
 Defines and validates subscribe, unsubscribe, operation, checkpoint, and
 other wire-message envelopes without interpreting consumer payloads.
 
-Current files: `packages/causality/src/message.ts`,
-`packages/live-model/src/protocol.ts`.
+Current files: `packages/live-model/src/protocol.ts`.
 
 ### Operation envelope
 
 Defines the generic operation shape and its causal identity and dependencies,
 without defining operation-specific data or behavior.
 
-Current files: `packages/causality/src/operation.ts`.
+Current files: `packages/live-model/src/protocol.ts`.
 
 ### Operation knowledge
 
@@ -264,7 +260,7 @@ Current files: `packages/live-model/src/creators/web-socket/web-socket-transport
 Reports acceptance or failure and reconciles locally forwarded operations with
 messages returned by another peer.
 
-Current files: `packages/causality/src/operation-result.ts`,
+Current files: `packages/live-model/src/protocol.ts`,
 `packages/live-model/src/creators/web-socket/web-socket-transport.ts`,
 `packages/api/src/websocket-handler.ts`.
 
@@ -302,8 +298,7 @@ are the chosen protocol representation; how causality recognizes an old
 dependency as part of the replaced history depends on the causal mechanism and
 is deferred.
 
-These checkpoint ideas are notes only and are not part of the initial package
-split.
+These checkpoint ideas are notes only and are not implemented.
 
 ## Configurable causal mechanisms
 
@@ -350,7 +345,7 @@ selection, checkpoints, and future branching. Transport mechanics, custom
 message handling, and most subscription routing should remain independent of
 the representation.
 
-The choice is intentionally deferred. The initial package split should not add
+The choice is intentionally deferred. A future package split should not add
 a generic mechanism interface or choose a sync algorithm before the existing
 responsibilities have been isolated.
 
@@ -359,7 +354,7 @@ Earlier clock research remains useful background: [Lamport clocks](https://www.m
 [dotted version vectors](https://gsd.di.uminho.pt/members/vff/dotted-version-vectors-2012.pdf),
 and [interval tree clocks](https://gsd.di.uminho.pt/members/cbm/ps/itc2008.pdf).
 
-## Defined in the causality package
+## Proposed for a future causality package
 
 - Message contracts
 - Operation envelope
@@ -371,7 +366,7 @@ and [interval tree clocks](https://gsd.di.uminho.pt/members/cbm/ps/itc2008.pdf).
 - Branching
 - Operation results and reconciliation
 
-## Defined outside the causality package
+## Proposed outside a future causality package
 
 - Addressing and entity identity
 - Operation definitions and semantics
@@ -381,7 +376,7 @@ and [interval tree clocks](https://gsd.di.uminho.pt/members/cbm/ps/itc2008.pdf).
 - References
 - Derived Lives and operation mapping
 
-## Not yet defined
+## Still unassigned
 
 - Materialized state and metadata
 - Materialized state persistence

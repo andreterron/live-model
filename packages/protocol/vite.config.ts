@@ -4,7 +4,7 @@ import * as path from 'path';
 
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/packages/causality',
+  cacheDir: '../../node_modules/.vite/packages/protocol',
   plugins: [
     dts({
       entryRoot: 'src',
@@ -21,7 +21,7 @@ export default defineConfig(() => ({
     },
     lib: {
       entry: 'src/index.ts',
-      name: 'causality',
+      name: 'protocol',
       fileName: 'index',
       formats: ['es' as const],
     },

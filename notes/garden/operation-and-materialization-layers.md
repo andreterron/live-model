@@ -4,11 +4,10 @@
 - Status: Growing
 - Confidence: Directional, with foundational decisions still open
 
-Update (2026-08-07): the empty `@live-model/protocol` package was renamed to
-`@live-model/causality`. Its first boundary contains generic operation
-contracts and results; Live-specific state and messages remain in `live-model`.
-Package ownership references below describe the architecture at the time this
-note was planted; the conceptual questions remain open.
+Update (2026-08-04): the existing protocol contracts have moved into
+`live-model`. The empty `@live-model/protocol` package skeleton remains reserved
+for future use. Package ownership references below describe the architecture at
+the time this note was planted; the conceptual questions remain open.
 
 ## Why this is in `garden`
 

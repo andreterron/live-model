@@ -1,5 +1,5 @@
 {
-  "name": "@live-model/causality",
+  "name": "@live-model/protocol",
   "version": "0.4.6",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,8 +28,5 @@
     "vite": "^8.0.16",
     "vite-plugin-dts": "~5.0.2",
     "vitest": "^4.1.8"
-  },
-  "peerDependencies": {
-    "zod": "^3.0.0"
   }
 }

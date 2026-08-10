@@ -19,7 +19,7 @@
       "path": "./packages/server"
     },
     {
-      "path": "./packages/causality"
+      "path": "./packages/protocol"
     },
     {
       "path": "./packages/explorer"

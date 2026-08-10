@@ -28,6 +28,7 @@
 # Live registry
 
 - Merge `BackendLiveModel` and its related types with `LiveModelClient`. Refactor `LiveModelClient` so its current transport dependency is an implementation or configuration concern rather than requiring a separate backend registry.
+- `@live-model/protocol` is now empty. It should either be removed, or re-used.
 
 # Queries
 

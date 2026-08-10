@@ -40,12 +40,10 @@ If you need to support other frameworks, please create a GitHub issue.
 The current package separation is exploratory and may change:
 
 - `live-model` contains Lives, client and backend registries, storage-backed
-  Lives, operators, framework integrations, Live state, and Live-specific
-  messages.
-- `@live-model/causality` contains data-structure-agnostic operation contracts
-  and operation results. It is the initial package boundary for operation sync
-  responsibilities. Most consumers should use its re-exports from `live-model`
-  rather than importing this package directly.
+  Lives, operators, framework integrations, and the shared state, operation,
+  and message contracts.
+- `@live-model/protocol` is currently an empty package skeleton reserved for
+  future use.
 - `@live-model/api` adapts Lives to HTTP and WebSocket transports and contains
   Node-specific infrastructure.
 - `@live-model/server` composes the packages into a runnable server.
