@@ -4,10 +4,11 @@
 - Status: Growing
 - Confidence: Directional, with foundational decisions still open
 
-Update (2026-08-04): the existing protocol contracts have moved into
-`live-model`. The empty `@live-model/protocol` package skeleton remains reserved
-for future use. Package ownership references below describe the architecture at
-the time this note was planted; the conceptual questions remain open.
+Update (2026-08-10): the existing protocol contracts remain in `live-model`,
+and the empty `@live-model/protocol` package has been removed. A possible
+future package split is explored in [Causality package split](./causality-package-split.md).
+Package ownership references below describe the architecture at the time this
+note was planted; the conceptual questions remain open.
 
 ## Why this is in `garden`
 
@@ -46,11 +47,11 @@ command atomicity affect almost every public interface.
 The main logic was mixed between `live-model` and `@live-model/protocol` when
 this note was planted:
 
-- `@live-model/protocol` contains operation definition types, current
+- `@live-model/protocol` contained operation definition types, current
   operation schemas, `LiveState`, operation results, and wire messages.
-- `live-model` owns operation application, materialized `Live` state,
+- `live-model` owned operation application, materialized `Live` state,
   subscriptions, registries, and the WebSocket client transport.
-- `@live-model/api` owns HTTP and WebSocket request handling, remote peer
+- `@live-model/api` owned HTTP and WebSocket request handling, remote peer
   subscriptions, and the SQLite adapter for materialized values.
 
 The result does not yet have a boundary where operations can be durable and
