@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import { allKeysKey, liveReference } from '../src/protocol.js';
 import {
   BackendLiveModel,
+  buildType,
   type Live,
   type StorageAdapter,
 } from '../src/index.js';
@@ -167,17 +169,16 @@ describe('BackendLiveModel', () => {
 
   test('encodes references in custom operation data', () => {
     const storage = createStorage();
-    const liveModel = new BackendLiveModel(storage, {
-      operationHandlers: {
-        attach(_currentState, operation) {
-          return {
-            status: 'success',
-            action: 'set',
-            value: operation.data,
-          };
-        },
-      },
-    });
+    storage.set('posts.first', {});
+    storage.setMetadata('posts.first', { op_set: { root: 'attachment' } });
+    const liveModel = new BackendLiveModel(storage);
+    liveModel.operationSetRegistry.register(
+      buildType('attachment').operation(
+        'attach',
+        z.unknown(),
+        (_state: unknown, value) => value
+      )
+    );
     const target = liveModel.forKey('people.ada');
 
     expect(
@@ -189,7 +190,32 @@ describe('BackendLiveModel', () => {
     expect(storage.get('posts.first')).toEqual({
       kind: 'value',
       value: { author: liveReference('people.ada') },
-      metadata: {},
+      metadata: { op_set: { root: 'attachment' } },
+    });
+  });
+
+  test('dispatches operations from the persisted operation-set metadata', () => {
+    const storage = createStorage();
+    storage.set('counter', 1);
+    storage.setMetadata('counter', { op_set: { root: 'counter' } });
+    const counter = buildType('counter').operation(
+      'increment',
+      z.number(),
+      (state: number, amount) => state + amount
+    );
+    const liveModel = new BackendLiveModel(storage);
+    liveModel.operationSetRegistry.register(counter);
+
+    expect(
+      liveModel.processOperation('counter', {
+        type: 'increment',
+        data: 2,
+      })
+    ).toEqual({ type: 'op_status', status: 'success' });
+    expect(storage.get('counter')).toEqual({
+      kind: 'value',
+      value: 3,
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 });

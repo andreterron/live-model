@@ -263,7 +263,7 @@ describe('WebSocketTransport', () => {
           state: {
             kind: 'value',
             value: 1,
-            metadata: { op_set: { root: 'counter@1' } },
+            metadata: { op_set: { root: 'counter' } },
           },
         }),
       })
@@ -278,7 +278,7 @@ describe('WebSocketTransport', () => {
       state: {
         kind: 'value',
         value: 2,
-        metadata: { op_set: { root: 'counter@1' } },
+        metadata: { op_set: { root: 'counter' } },
       },
     });
   });
@@ -304,7 +304,7 @@ describe('WebSocketTransport', () => {
 
     sender.send({
       type: 'set_metadata',
-      data: { op_set: { root: 'counter@1' } },
+      data: { op_set: { root: 'counter' } },
     });
 
     expect(receiverMessage).toHaveBeenCalledWith({
@@ -313,7 +313,7 @@ describe('WebSocketTransport', () => {
       state: {
         kind: 'value',
         value: 1,
-        metadata: { op_set: { root: 'counter@1' } },
+        metadata: { op_set: { root: 'counter' } },
       },
     });
   });

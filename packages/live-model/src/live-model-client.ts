@@ -7,15 +7,18 @@ import {
   type WebSocketTransportOptions,
 } from './creators/web-socket/web-socket-transport.js';
 import type { Live } from './live.js';
+import { OperationSetRegistry } from './operation-set-registry.js';
 import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
 
 export interface LiveModelClientOptions {
   websocketUrl?: string | URL;
   transport?: WebSocketTransport;
   transportOptions?: WebSocketTransportOptions;
+  operationSetRegistry?: OperationSetRegistry;
 }
 
 export class LiveModelClient {
+  operationSetRegistry: OperationSetRegistry;
   private readonly livesByKey = new Map<string, Live<unknown>>();
   private readonly referenceCodec = new LiveReferenceCodec((key) =>
     this.forKey(key)
@@ -26,12 +29,16 @@ export class LiveModelClient {
   constructor(options: LiveModelClientOptions = {}) {
     this.options = options;
     this.transport = options.transport;
+    this.operationSetRegistry =
+      options.operationSetRegistry ?? new OperationSetRegistry();
   }
 
   // TODO: This doesn't update the transport for already-created Lives
   configure(options: LiveModelClientOptions): void {
     this.options = options;
     this.transport = options.transport;
+    this.operationSetRegistry =
+      options.operationSetRegistry ?? this.operationSetRegistry;
     this.clear();
   }
 

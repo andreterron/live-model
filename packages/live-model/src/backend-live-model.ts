@@ -5,15 +5,12 @@ import {
   type OperationResult,
   type OperationStatusMessage,
 } from './protocol.js';
-import {
-  StorageLive,
-  type StorageAdapter,
-  type StorageOperationHandlers,
-} from './creators/storage-live.js';
+import { StorageLive, type StorageAdapter } from './creators/storage-live.js';
 import { BaseLive, type Live } from './live.js';
 import type { Subscriber } from './reactivity/subscriber.js';
 import type { Subscription } from './reactivity/subscription.js';
 import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
+import { OperationSetRegistry } from './operation-set-registry.js';
 
 export type BackendLiveFactory = <T>(key: string) => Live<T>;
 
@@ -70,7 +67,7 @@ function toStatusMessage(result: OperationResult): OperationStatusMessage {
 
 export interface BackendLiveModelOptions {
   createLive?: BackendLiveFactory;
-  operationHandlers?: StorageOperationHandlers;
+  operationSetRegistry?: OperationSetRegistry;
 }
 
 // TODO: Merge BackendLiveModel and its related types with LiveModelClient.
@@ -82,6 +79,7 @@ export interface BackendLiveModelOptions {
  * A custom factory can select different Live implementations based on the key.
  */
 export class BackendLiveModel {
+  readonly operationSetRegistry: OperationSetRegistry;
   private readonly livesByKey = new Map<string, Live<unknown>>();
   private readonly allKeysLive: AllKeysLive;
   private readonly createLive: BackendLiveFactory;
@@ -93,6 +91,8 @@ export class BackendLiveModel {
     private readonly storage: StorageAdapter,
     options: BackendLiveModelOptions = {}
   ) {
+    this.operationSetRegistry =
+      options.operationSetRegistry ?? new OperationSetRegistry();
     this.allKeysLive = new AllKeysLive(storage);
     this.referenceCodec.register(allKeysKey, this.allKeysLive);
     this.createLive =
@@ -100,7 +100,7 @@ export class BackendLiveModel {
       (<T>(key: string) =>
         new StorageLive<T, Operation>(key, this.storage, {
           onKeyMembershipChange: () => this.allKeysLive.refresh(),
-          operationHandlers: options.operationHandlers,
+          operationSetRegistry: this.operationSetRegistry,
         }));
   }
 

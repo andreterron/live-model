@@ -1,5 +1,4 @@
-import { allKeysKey } from 'live-model';
-import { BackendLiveModel } from 'live-model';
+import { allKeysKey, BackendLiveModel } from 'live-model';
 import type { StorageAdapter } from 'live-model';
 import { createOperationsHandler } from '../src/operations-request-handler.js';
 
@@ -105,28 +104,7 @@ describe('createOperationsHandler', () => {
 
   test('accepts arbitrary operation types on the wire', async () => {
     const handler = createOperationsHandler(
-      new BackendLiveModel(createStorage({ items: ['first'] }), {
-        operationHandlers: {
-          append(currentState, operation) {
-            if (
-              currentState.kind !== 'value' ||
-              !Array.isArray(currentState.value) ||
-              typeof operation.data !== 'string'
-            ) {
-              return {
-                status: 'error',
-                error: { code: 'invalid_state' },
-              };
-            }
-
-            return {
-              status: 'success',
-              action: 'set',
-              value: [...currentState.value, operation.data],
-            };
-          },
-        },
-      })
+      new BackendLiveModel(createStorage({ items: ['first'] }))
     );
     const response = await handler(
       new Request('http://localhost/operations', {
@@ -144,7 +122,15 @@ describe('createOperationsHandler', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([
-      { type: 'op_status', status: 'success' },
+      {
+        type: 'op_status',
+        status: 'error',
+        error: {
+          code: 'unsupported_operation',
+          message:
+            'Operation "append" is not defined for operation set "default"',
+        },
+      },
     ]);
   });
 });

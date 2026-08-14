@@ -95,9 +95,9 @@ the lifetime of the page.
   version uses one linear, local timeline.
 - **Conflict hook:** there is no hook that determines whether two operations
   conflict and require automatic time branching.
-- **Acceptance hook:** `StorageOperationHandlers` currently determine whether an
-  operation succeeds, but there is no general policy hook independent of how an
-  operation is applied.
+- **Acceptance hook:** `OperationSetRegistry` determines which operations are
+  accepted and how they affect materialized state. Authorization remains a
+  separate future policy hook.
 - **Dependencies:** protocol `Message` mentions dependencies only as a TODO.
   Timeline sequence communicates observation order, but causal dependencies are
   not modeled or visualized yet.

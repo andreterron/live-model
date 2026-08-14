@@ -32,12 +32,12 @@ describe('LiveState', () => {
     expect(LiveState.absent('not_found')).not.toHaveProperty('metadata');
     expect(
       LiveState.absent('deleted', undefined, {
-        op_set: { root: 'counter@1' },
+        op_set: { root: 'counter' },
       })
     ).toEqual({
       kind: 'absent',
       reason: 'deleted',
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 
@@ -48,8 +48,8 @@ describe('LiveState', () => {
         value: { title: 'Draft' },
         metadata: {
           op_set: {
-            root: 'todo@1',
-            props: { title: 'text@1' },
+            root: 'todo',
+            props: { title: 'text' },
           },
         },
       }).success

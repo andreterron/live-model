@@ -1,4 +1,7 @@
+import { z } from 'zod';
 import {
+  buildType,
+  OperationSetRegistry,
   StorageLive,
   type Operation,
   type StorageAdapter,
@@ -75,56 +78,6 @@ describe('StorageLive', () => {
     expect(states).toEqual([{ kind: 'absent', reason: 'not_found' }]);
   });
 
-  test('applies registered custom operations to the current state', () => {
-    const storage = createStorage();
-    storage.set('items', ['first']);
-    const states: unknown[] = [];
-    const live = new StorageLive<unknown[], { type: 'append'; data: string }>(
-      'items',
-      storage,
-      {
-        operationHandlers: {
-          append(currentState, operation) {
-            if (
-              currentState.kind !== 'value' ||
-              !Array.isArray(currentState.value) ||
-              typeof operation.data !== 'string'
-            ) {
-              return {
-                status: 'error',
-                error: {
-                  code: 'invalid_state',
-                  message: 'append requires an array value',
-                },
-              };
-            }
-
-            return {
-              status: 'success',
-              action: 'set',
-              value: [...currentState.value, operation.data],
-            };
-          },
-        },
-      }
-    );
-    live.subscribe({ next: (state) => states.push(state) });
-
-    expect(live.op({ type: 'append', data: 'second' })).toEqual({
-      status: 'success',
-    });
-    expect(storage.get('items')).toEqual({
-      kind: 'value',
-      value: ['first', 'second'],
-      metadata: {},
-    });
-    expect(states[states.length - 1]).toEqual({
-      kind: 'value',
-      value: ['first', 'second'],
-      metadata: {},
-    });
-  });
-
   test('rejects unregistered custom operations without replacing state', () => {
     const storage = createStorage();
     storage.set('items', ['first']);
@@ -146,16 +99,107 @@ describe('StorageLive', () => {
     storage.set('counter', 1);
     const live = new StorageLive<number, { type: 'increment'; data: number }>(
       'counter',
-      storage,
-      { operationHandlers: {} }
+      storage
     );
 
-    live.setMetadata({ op_set: { root: 'counter@1' } });
+    live.setMetadata({ op_set: { root: 'counter' } });
 
     expect(live.get()).toEqual({
       kind: 'value',
       value: 1,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
+  });
+
+  test('selects a registered operation set from current metadata', () => {
+    const storage = createStorage();
+    storage.set('counter', 1);
+    storage.setMetadata('counter', { op_set: { root: 'counter' } });
+    const counter = buildType('counter').operation(
+      'increment',
+      z.number(),
+      (state: number, amount) => state + amount
+    );
+    const registry = new OperationSetRegistry().register(counter);
+    const live = new StorageLive<number, Operation>('counter', storage, {
+      operationSetRegistry: registry,
+    });
+
+    expect(live.op({ type: 'increment', data: 2 })).toEqual({
+      status: 'success',
+    });
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 3,
+      metadata: { op_set: { root: 'counter' } },
+    });
+    expect(live.op({ type: 'set_value', data: 10 })).toMatchObject({
+      status: 'error',
+      error: { code: 'unsupported_operation' },
+    });
+    expect(live.op({ type: 'delete' })).toMatchObject({
+      status: 'error',
+      error: { code: 'unsupported_operation' },
+    });
+  });
+
+  test('resolves metadata again after the operation-set assignment changes', () => {
+    const storage = createStorage();
+    storage.set('counter', 1);
+    storage.setMetadata('counter', { op_set: { root: 'counter' } });
+    const counter = buildType('counter').operation(
+      'increment',
+      z.number(),
+      (state: number, amount) => state + amount
+    );
+    const frozenCounter = buildType('frozen-counter').operation(
+      'increment',
+      z.number()
+    );
+    const registry = new OperationSetRegistry()
+      .register(counter)
+      .register(frozenCounter);
+    const live = new StorageLive<number, Operation>('counter', storage, {
+      operationSetRegistry: registry,
+    });
+
+    expect(live.op({ type: 'increment', data: 1 })).toEqual({
+      status: 'success',
+    });
+    live.setMetadata({ op_set: { root: 'frozen-counter' } });
+    expect(live.op({ type: 'increment', data: 1 })).toEqual({
+      status: 'success',
+    });
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 2,
+      metadata: { op_set: { root: 'frozen-counter' } },
+    });
+  });
+
+  test('runs explicitly registered set and delete handlers', () => {
+    const storage = createStorage();
+    storage.set('value', 1);
+    storage.setMetadata('value', { op_set: { root: 'mutable-number' } });
+    const mutableNumber = buildType('mutable-number')
+      .operation('set_value', z.number(), (_state: number, value) => value)
+      .operation('delete');
+    const registry = new OperationSetRegistry().register(mutableNumber, {
+      delete: () => ({ action: 'delete' }),
+    });
+    const live = new StorageLive<number, Operation>('value', storage, {
+      operationSetRegistry: registry,
+    });
+
+    expect(live.op({ type: 'set_value', data: 2 })).toEqual({
+      status: 'success',
+    });
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 2,
+      metadata: { op_set: { root: 'mutable-number' } },
+    });
+    expect(live.op({ type: 'delete' })).toEqual({ status: 'success' });
+    expect(live.get()).toEqual({ kind: 'absent', reason: 'not_found' });
   });
 });

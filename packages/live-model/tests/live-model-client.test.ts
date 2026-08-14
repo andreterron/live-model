@@ -1,6 +1,8 @@
 import {
+  buildType,
   liveReference,
   LiveModelClient,
+  OperationSetRegistry,
   WebSocketTransport,
   type Live,
   type Operation,
@@ -44,6 +46,15 @@ class ReferenceTestTransport extends WebSocketTransport {
 }
 
 describe('LiveModelClient', () => {
+  test('exposes an injectable operation-set registry', () => {
+    const operationSetRegistry = new OperationSetRegistry();
+    const client = new LiveModelClient({ operationSetRegistry });
+
+    expect(client.operationSetRegistry).toBe(operationSetRegistry);
+    client.operationSetRegistry.register(buildType('counter'));
+    expect(operationSetRegistry.has('counter')).toBe(true);
+  });
+
   test('returns the same live for the same key', () => {
     const client = new LiveModelClient({
       transport: new WebSocketTransport('ws://live-model.test'),
@@ -169,19 +180,19 @@ describe('LiveModelClient', () => {
       metadata: {},
     });
 
-    live.setMetadata({ op_set: { root: 'counter@1' } });
+    live.setMetadata({ op_set: { root: 'counter' } });
 
     expect(transport.operations[transport.operations.length - 1]).toEqual({
       key: 'counter',
       operation: {
         type: 'set_metadata',
-        data: { op_set: { root: 'counter@1' } },
+        data: { op_set: { root: 'counter' } },
       },
     });
     expect(live.get()).toEqual({
       kind: 'value',
       value: 1,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 });

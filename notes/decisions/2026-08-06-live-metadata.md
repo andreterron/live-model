@@ -63,9 +63,10 @@ interface LiveMetadata {
 }
 ```
 
-`root` is an identifier such as `counter@1`. A future client registry will
-resolve it to the operation-set definition containing schemas and reducers.
-The registry and assignment validation are not implemented yet.
+`root` is an identifier such as `counter`. A shared registry resolves it to the
+operation-set definition containing schemas and reducers. Registry IDs are not
+versioned yet; versioning can be added when compatibility requirements are
+better understood. Assignment validation is not implemented yet.
 
 ### Property assignments are deferred
 

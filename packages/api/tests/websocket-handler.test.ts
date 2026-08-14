@@ -282,7 +282,7 @@ describe('createLiveModelWebSocket', () => {
         key: 'counter',
         operation: {
           type: 'set_metadata',
-          data: { op_set: { root: 'counter@1' } },
+          data: { op_set: { root: 'counter' } },
         },
       })
     );
@@ -293,13 +293,13 @@ describe('createLiveModelWebSocket', () => {
       state: {
         kind: 'value',
         value: 1,
-        metadata: { op_set: { root: 'counter@1' } },
+        metadata: { op_set: { root: 'counter' } },
       },
     });
     expect(liveModel.forKey('counter').get()).toEqual({
       kind: 'value',
       value: 1,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 

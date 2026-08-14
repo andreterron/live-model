@@ -108,13 +108,13 @@ describe('reactivity', () => {
     expect(
       live.op({
         type: 'set_metadata',
-        data: { op_set: { root: 'counter@1' } },
+        data: { op_set: { root: 'counter' } },
       })
     ).toEqual({ status: 'success' });
     expect(live.get()).toEqual({
       kind: 'value',
       value: 1,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
     expect(next).toHaveBeenCalledExactlyOnceWith(live.get());
 
@@ -122,7 +122,7 @@ describe('reactivity', () => {
     expect(live.get()).toEqual({
       kind: 'value',
       value: 2,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 });

@@ -25,6 +25,7 @@ export * from './model/model.js';
 
 // Types
 export * from './type-definition.js';
+export * from './operation-set-registry.js';
 export * from './types/array-type.js';
 
 // React

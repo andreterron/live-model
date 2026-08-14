@@ -29,6 +29,11 @@ deferred until properties have independent Live identities and histories. The
 complete rationale and persistence decisions are recorded in
 [Live metadata and operation-set assignment](./2026-08-06-live-metadata.md).
 
+On 2026-08-13, metadata-driven processing was connected through a shared
+operation-set registry. Only `set_metadata` remains core; assigned operation
+sets must explicitly declare `set_value` and `delete`. See
+[Shared operation-set registry and processing](./2026-08-13-operation-set-registry.md).
+
 ## Amendment: reusable runtime type definitions
 
 On 2026-08-04, `buildType(name)` introduced reusable runtime operation

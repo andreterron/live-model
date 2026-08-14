@@ -39,14 +39,14 @@ describe('SQLiteStorageAdapter', () => {
 
     expect(
       storage.setMetadata('counter', {
-        op_set: { root: 'counter@1' },
+        op_set: { root: 'counter' },
       })
     ).toBe(true);
     expect(storage.set('counter', 2)).toBe(true);
     expect(storage.get('counter')).toEqual({
       kind: 'value',
       value: 2,
-      metadata: { op_set: { root: 'counter@1' } },
+      metadata: { op_set: { root: 'counter' } },
     });
   });
 

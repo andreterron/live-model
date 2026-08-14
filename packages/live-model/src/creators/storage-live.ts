@@ -11,6 +11,7 @@ import {
   type OperationResult,
 } from '../protocol.js';
 import { BaseLive, toOperation } from '../live.js';
+import { OperationSetRegistry } from '../operation-set-registry.js';
 import type { Subscriber } from '../reactivity/subscriber.js';
 import type { Subscription } from '../reactivity/subscription.js';
 
@@ -22,61 +23,26 @@ export interface StorageAdapter {
   delete(key: string): boolean;
 }
 
-export interface StorageLiveOptions<OPS extends Operation = Operation> {
+export interface StorageLiveOptions {
   onKeyMembershipChange?(): void;
-  operationHandlers?: StorageOperationHandlers<OPS>;
+  operationSetRegistry?: OperationSetRegistry;
 }
-
-// TODO: Replace storage-specific operation handlers with a general solution
-
-export type StorageOperationHandlerResult =
-  | { status: 'success'; action: 'set'; value: unknown }
-  | { status: 'success'; action: 'delete' }
-  | { status: 'error'; error: OperationError };
-
-export type StorageOperationHandler<OPS extends Operation = Operation> = (
-  currentState: LiveState<unknown>,
-  operation: OPS
-) => StorageOperationHandlerResult;
-
-export type StorageOperationHandlers<OPS extends Operation = Operation> =
-  Record<string, StorageOperationHandler<OPS>>;
-
-export const defaultStorageOperationHandlers: StorageOperationHandlers = {
-  set_value(_currentState, operation) {
-    if (!('data' in operation)) {
-      return operationError('invalid_operation', 'set_value requires data');
-    }
-
-    return {
-      status: 'success',
-      action: 'set',
-      value: operation.data,
-    };
-  },
-  delete() {
-    return {
-      status: 'success',
-      action: 'delete',
-    };
-  },
-};
 
 /** A synchronous Live whose value is owned by a key-value storage adapter. */
 export class StorageLive<
   T,
   OPS extends Operation = DefaultOperations<T>
 > extends BaseLive<T, OPS> {
-  private readonly operationHandlers: StorageOperationHandlers<OPS>;
+  private readonly operationSetRegistry: OperationSetRegistry;
 
   constructor(
     private readonly key: string,
     private readonly storage: StorageAdapter,
-    private readonly options: StorageLiveOptions<OPS> = {}
+    private readonly options: StorageLiveOptions = {}
   ) {
     super();
-    this.operationHandlers =
-      options.operationHandlers ?? defaultStorageOperationHandlers;
+    this.operationSetRegistry =
+      options.operationSetRegistry ?? new OperationSetRegistry();
   }
 
   override subscribe(subscriber: Subscriber<LiveState<T>>): Subscription {
@@ -115,17 +81,13 @@ export class StorageLive<
       return this.persistMetadata(parsed.data, currentState);
     }
 
-    const handler = this.operationHandlers[operation.type];
-    if (!handler) {
-      return operationError(
-        'unsupported_operation',
-        `Operation "${operation.type}" is not supported by this Live`
-      );
-    }
-
-    const result = handler(currentState, operation);
+    const result = this.operationSetRegistry.process(currentState, operation);
     if (result.status === 'error') {
       return result;
+    }
+
+    if (result.action === 'unchanged') {
+      return { status: 'success' };
     }
 
     if (result.action === 'delete') {
@@ -141,7 +103,7 @@ export class StorageLive<
     );
   }
 
-  // TODO: Remove persistValue. Logic should be on the operationHandler itself.
+  // TODO: Move persistence of processing effects into a reusable processor.
   private persistValue(
     value: unknown,
     existedBefore: boolean,
@@ -188,7 +150,7 @@ export class StorageLive<
     return { status: 'success' };
   }
 
-  // TODO: Remove persistDelete. Logic should be on the operationHandler itself.
+  // TODO: Move persistence of processing effects into a reusable processor.
   private persistDelete(existedBefore: boolean): OperationResult {
     if (!this.storage.delete(this.key)) {
       return operationError(

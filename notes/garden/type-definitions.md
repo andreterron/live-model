@@ -37,8 +37,8 @@ const tArray = buildType('array').operation('insert', zRefOrValue);
 ```
 
 The fluent builder is itself the immutable type definition; there is no final
-`.get()` step. A future Live Model client registry can consume this definition
-and perform any additional building or indexing when the type is registered.
+`.get()` step. `OperationSetRegistry` consumes these definitions and indexes
+them by name.
 
 `buildArrayType(itemSchema)` packages that definition for reuse and `tArray`
 is its unconstrained `z.unknown()` form. The initial array contract only
@@ -48,13 +48,13 @@ assignment remain separate design questions.
 
 ## Follow-up work
 
-Operation-set assignments will be stored in Live metadata as registered
+Operation-set assignments are stored in Live metadata as registered
 operation-set IDs:
 
 ```ts
 {
   op_set: {
-    root: 'todo@1',
+    root: 'todo',
   },
 }
 ```
@@ -64,6 +64,17 @@ Metadata is part of the same `LiveState` and history as the value. A core
 always include metadata, absent states may retain it, and loading states do not
 have it. Definitions remain registered in code because schemas and reducers
 are not serializable.
+
+The shared registry validates operations and runs their reducers.
+Storage-backed Lives resolve the registry ID from current persisted metadata
+for every operation, so `set_metadata` changes dispatch immediately. A missing
+reducer accepts the operation without changing state. Explicit registration
+handlers can produce non-value effects such as deletion. See
+[Shared operation-set registry and processing](../decisions/2026-08-13-operation-set-registry.md).
+
+Each registry automatically includes a `default` operation set with
+`set_value` and `delete`. It is selected when metadata has no root assignment;
+assigning another set removes those operations unless it declares them too.
 
 Property operation-set assignments are not supported yet. Properties are
 ordinary JSON fields whose changes become `set_value` on the root Live; they do
