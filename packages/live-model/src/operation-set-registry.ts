@@ -108,6 +108,10 @@ export class OperationSetRegistry {
     return this.registrations.get(id)?.definition;
   }
 
+  list(): readonly TypeDefinition[] {
+    return [...this.registrations.values()].map(({ definition }) => definition);
+  }
+
   process(
     state: LiveState<unknown>,
     operation: Operation

@@ -93,3 +93,16 @@ assignment compatibility validation remain future work.
   creation, replacement, and deletion behavior for unassigned Lives.
 - Concurrent or asynchronous processors will eventually need atomic or
   per-key-serialized metadata reads and state writes.
+
+### Current effect model does not cover collection writes
+
+`OperationSetProcessingResult` currently describes only what happens to the
+Live key being processed: leave it unchanged, replace its value, or delete it.
+That is insufficient for collection operations whose materialization is stored
+elsewhere. For example, an array `insert` may need to issue a SQL insert that
+creates a new row rather than replacing the array value at the current key.
+
+We are intentionally deferring that effect design until after the website can
+exercise metadata-selected operation sets. A follow-up should decide whether
+processing returns commands, transaction-scoped effects, or delegates to a
+storage-aware handler while preserving shared validation and dispatch.

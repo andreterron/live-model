@@ -24,6 +24,16 @@ describe('OperationSetRegistry', () => {
     ).toEqual({ status: 'success', action: 'delete' });
   });
 
+  test('lists registered definitions for operation-driven clients', () => {
+    const counter = buildType('counter').operation('increment', z.number());
+    const registry = new OperationSetRegistry().register(counter);
+
+    expect(registry.list().map(({ name }) => name)).toEqual([
+      'default',
+      'counter',
+    ]);
+  });
+
   test('validates and reduces operations with a registered definition', () => {
     const counter = buildType('counter').operation(
       'increment',

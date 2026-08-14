@@ -7,13 +7,14 @@ import {
   Scripts,
   ScrollRestoration,
 } from 'react-router';
-import { configureLiveModel } from 'live-model';
+import { configureLiveModel, OperationSetRegistry } from 'live-model';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { Route } from './+types/root';
 import './app.css';
 import { ThemeProvider } from './components/theme-provider';
+import { counterOperationSet } from './lib/operation-sets';
 
 const websocketUrl =
   typeof window === 'undefined'
@@ -28,8 +29,13 @@ const websocketUrl =
         return url;
       })();
 
+const operationSetRegistry = new OperationSetRegistry().register(
+  counterOperationSet
+);
+
 configureLiveModel({
   websocketUrl,
+  operationSetRegistry,
 });
 
 export const links: Route.LinksFunction = () => [];

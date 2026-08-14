@@ -76,6 +76,11 @@ Each registry automatically includes a `default` operation set with
 `set_value` and `delete`. It is selected when metadata has no root assignment;
 assigning another set removes those operations unless it declares them too.
 
+The initial `OperationSetProcessingResult` only describes effects on the
+current key (`unchanged`, `set`, or `delete`). It cannot yet represent an array
+`insert` that materializes as a SQL query creating another row. Collection
+effects need a follow-up design after the website operation-set experiment.
+
 Property operation-set assignments are not supported yet. Properties are
 ordinary JSON fields whose changes become `set_value` on the root Live; they do
 not have independent operation histories. The possible `props` metadata field

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   buildType,
   liveReference,
@@ -192,6 +193,38 @@ describe('LiveModelClient', () => {
     expect(live.get()).toEqual({
       kind: 'value',
       value: 1,
+      metadata: { op_set: { root: 'counter' } },
+    });
+  });
+
+  test('processes and sends operations from the assigned client operation set', () => {
+    const transport = new ReferenceTestTransport();
+    const client = new LiveModelClient({ transport });
+    client.operationSetRegistry.register(
+      buildType('counter').operation(
+        'increment',
+        z.number(),
+        (state: number, amount) => state + amount
+      )
+    );
+    const live = client.forKey<number>('counter');
+    live.subscribe({ next: vi.fn() });
+    transport.emit('counter', {
+      kind: 'value',
+      value: 1,
+      metadata: { op_set: { root: 'counter' } },
+    });
+
+    expect(live.op({ type: 'increment', data: 2 })).toEqual({
+      status: 'success',
+    });
+    expect(transport.operations.at(-1)).toEqual({
+      key: 'counter',
+      operation: { type: 'increment', data: 2 },
+    });
+    expect(live.get()).toEqual({
+      kind: 'value',
+      value: 3,
       metadata: { op_set: { root: 'counter' } },
     });
   });

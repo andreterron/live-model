@@ -7,7 +7,8 @@ import {
   createOperationsHandler,
   SQLiteStorageAdapter,
 } from '@live-model/api';
-import { BackendLiveModel } from 'live-model';
+import { BackendLiveModel, OperationSetRegistry } from 'live-model';
+import { counterOperationSet } from './operation-sets.js';
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10);
 const hostname = process.env.HOST ?? '127.0.0.1';
@@ -20,7 +21,10 @@ const publicDir = existsSync(builtPublicDir)
   : fileURLToPath(new URL(/* @vite-ignore */ '../public', import.meta.url));
 
 const storage = new SQLiteStorageAdapter(databasePath);
-const liveModel = new BackendLiveModel(storage);
+const operationSetRegistry = new OperationSetRegistry().register(
+  counterOperationSet
+);
+const liveModel = new BackendLiveModel(storage, { operationSetRegistry });
 
 const handleOperations = createOperationsHandler(liveModel);
 

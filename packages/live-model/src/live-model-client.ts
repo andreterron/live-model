@@ -53,6 +53,7 @@ export class LiveModelClient {
         ...options,
         // TODO: if this.transport changes, it won't update existing lives
         transport: this.getTransport(),
+        operationSetRegistry: this.operationSetRegistry,
       });
       live = new ReferenceResolvingLive<T>(source, this.referenceCodec);
       this.livesByKey.set(key, live);

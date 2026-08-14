@@ -3,12 +3,17 @@ import {
   LiveState,
   type DeleteOperation,
   type LiveMetadata,
+  type Operation,
+  type OperationArgs,
+  type OperationName,
+  type OperationResult,
   type SetMetadataOperation,
   type SetValueOperation,
   type StateMessage,
 } from '../../protocol.js';
 import { type ZodType } from 'zod';
-import { BaseLive } from '../../live.js';
+import { BaseLive, toOperation } from '../../live.js';
+import { OperationSetRegistry } from '../../operation-set-registry.js';
 import { Subscriber } from '../../reactivity/subscriber.js';
 import { Subscription } from '../../reactivity/subscription.js';
 import {
@@ -20,12 +25,14 @@ export interface WebSocketLiveOptions<T> {
   // TODO: Review whether `validator` should be on this Live, or if it should be a Live wrapper
   validator?: ZodType<T, any, any>;
   transport: WebSocketTransport;
+  operationSetRegistry?: OperationSetRegistry;
 }
 
 export class WebSocketLive<T> extends BaseLive<T> {
   protected state: LiveState<T> = LiveState.loading;
   protected transport: WebSocketTransport;
   protected transportConnection?: WebSocketTransportConnection;
+  protected operationSetRegistry: OperationSetRegistry;
 
   constructor(
     protected key: string,
@@ -33,6 +40,47 @@ export class WebSocketLive<T> extends BaseLive<T> {
   ) {
     super();
     this.transport = options.transport;
+    this.operationSetRegistry =
+      options.operationSetRegistry ?? new OperationSetRegistry();
+  }
+
+  override op(operation: Operation): OperationResult;
+  override op<K extends OperationName<Operation>>(
+    type: K,
+    ...args: OperationArgs<Operation, K>
+  ): OperationResult;
+  override op(
+    operationOrType: Operation | OperationName<Operation>,
+    ...args: unknown[]
+  ): OperationResult {
+    const operation = toOperation<Operation>(operationOrType, args);
+    if (operation.type === 'set_metadata') {
+      return super.op(operation);
+    }
+
+    const result = this.operationSetRegistry.process(this.state, operation);
+    if (result.status === 'error') {
+      return result;
+    }
+
+    this.sendOperation(operation);
+    if (result.action === 'unchanged') {
+      return { status: 'success' };
+    }
+
+    if (result.action === 'delete') {
+      const metadata =
+        this.state.kind === 'loading' ? undefined : this.state.metadata;
+      this.state = LiveState.absent('deleted', undefined, metadata);
+    } else {
+      const metadata =
+        this.state.kind === 'loading'
+          ? emptyLiveMetadata
+          : this.state.metadata ?? emptyLiveMetadata;
+      this.state = LiveState.value(result.value as T, metadata);
+    }
+    this.notifyLiveState(this.state);
+    return { status: 'success' };
   }
 
   override subscribe(subscriber: Subscriber<LiveState<T>>): Subscription {
@@ -117,6 +165,11 @@ export class WebSocketLive<T> extends BaseLive<T> {
       data,
     };
 
+    this.activateTransport();
+    this.transportConnection?.send(operation);
+  }
+
+  protected sendOperation(operation: Operation) {
     this.activateTransport();
     this.transportConnection?.send(operation);
   }
