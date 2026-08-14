@@ -31,11 +31,12 @@ in `metadata.op_set.root`. IDs are intentionally not versioned yet.
 
 For each non-metadata operation, `StorageLive` reads the current state from its
 storage adapter and passes it to `OperationSetRegistry.process(state,
-operation)`. The registry resolves `state.metadata.op_set.root`; it does not
-accept an operation-set ID from the incoming operation. `StorageLive` does not
-cache a selected handler on construction. Consequently, a successful
-`set_metadata` affects the very next operation without rebuilding the Live, and
-frontend code can invoke the identical metadata-driven processing entry point.
+operation, { key })`. The registry resolves `state.metadata.op_set.root`; it
+does not accept an operation-set ID from the incoming operation. `StorageLive`
+does not cache a selected handler on construction. Consequently, a successful
+`set_metadata` affects the very next operation without rebuilding the Live,
+and frontend code can invoke the identical metadata-driven processing entry
+point.
 
 An assigned but unregistered ID returns `unknown_operation_set`. An operation
 that is absent from the selected definition returns `unsupported_operation`.
@@ -56,23 +57,30 @@ removes them unless that definition explicitly declares them.
 
 ### Processing produces storage-independent effects
 
-The registry validates the operation and produces one of three effects:
+The registry validates the operation and returns a list of keyed, declarative
+effects. The initial effect vocabulary is:
 
-- `unchanged`: the operation was accepted but does not change materialized
-  state;
-- `set`: replace the materialized value;
-- `delete`: remove the materialized value.
+- `set`: create or replace the materialized value at a key;
+- `set_metadata`: replace the materialized metadata at a key;
+- `delete`: remove the materialized value at a key.
 
-A definition reducer automatically produces a `set` effect. An operation with
-neither a reducer nor an explicit handler produces `unchanged`, preserving the
-existing optional-reducer semantics. Reducers currently require a value state.
+A definition reducer automatically produces a `set` effect targeting the key
+whose operation is being processed. An operation with neither a reducer nor an
+explicit handler produces an empty effect list, preserving the existing
+optional-reducer semantics. Reducers currently require a value state.
 
 Registrations may provide explicit handlers for effects that cannot be
-expressed as a value-to-value reducer, particularly deletion. Handlers are
-declared only for operations present in the definition and receive the current
-`LiveState` plus the schema-parsed operation. They return effects rather than
-calling storage, so the same processing abstraction can be used in different
-environments.
+expressed as a value-to-value reducer. Handlers are declared only for
+operations present in the definition and receive the current `LiveState`, the
+schema-parsed operation, and a context containing the current key. They return
+effects rather than calling storage, so one collection operation can create or
+change other keyed rows without coupling its operation set to SQLite or another
+adapter.
+
+`StorageLive` currently applies the returned effects through `StorageAdapter`.
+It refreshes affected cached backend Lives and key-membership queries. The
+WebSocket frontend applies effects targeting its own key optimistically;
+effects targeting other keys are left to canonical backend state messages.
 
 ### Metadata assignment is schema-validated, not registry-validated
 
@@ -86,23 +94,44 @@ assignment compatibility validation remain future work.
 
 - Backend operations now select definitions dynamically from persisted
   metadata.
-- `LiveModelClient` exposes the shared registry, but `WebSocketLive` is not yet
-  wired for registry-based optimistic processing.
+- `LiveModelClient` exposes the shared registry, and `WebSocketLive` uses it for
+  registry-based optimistic processing of effects targeting its key.
 - Explicit handlers provide deletion today without making `delete` core.
 - The automatically registered `default` operation set preserves conventional
   creation, replacement, and deletion behavior for unassigned Lives.
+- Effect lists are currently applied sequentially. A later `StorageAdapter`
+  transaction boundary must make multi-effect operations atomic and prevent a
+  failed later effect from leaving earlier effects persisted.
 - Concurrent or asynchronous processors will eventually need atomic or
   per-key-serialized metadata reads and state writes.
 
-### Current effect model does not cover collection writes
+### Declarative effects are a transitional materialization model
 
-`OperationSetProcessingResult` currently describes only what happens to the
-Live key being processed: leave it unchanged, replace its value, or delete it.
-That is insufficient for collection operations whose materialization is stored
-elsewhere. For example, an array `insert` may need to issue a SQL insert that
-creates a new row rather than replacing the array value at the current key.
+`OperationSetProcessingResult` can now describe an array `insert` that creates
+a different keyed row instead of replacing the collection's current value.
+This is deliberately a small extension of the current synchronous processing
+architecture, not the intended final persistence model.
 
-We are intentionally deferring that effect design until after the website can
-exercise metadata-selected operation sets. A follow-up should decide whether
-processing returns commands, transaction-scoped effects, or delegates to a
-storage-aware handler while preserving shared validation and dispatch.
+The long-term direction is an operation-history projection model: accepted
+operations are durably appended to their entity's history, and a
+projector/materializer translates that history into storage-specific views such
+as SQLite collection rows. That model should support replay, rebuilding
+materialized state, and storage-specific projection logic without putting SQL
+inside operation-set handlers. The keyed effect list is a stepping stone toward
+that separation and should not prevent replacing direct execution with durable
+history plus projections later.
+
+### The Explorer multiset prototype stores an array of references
+
+The website registers a provisional `multiset` operation set with `insert` and
+`remove`. Both accept a reference to a root Live entity, not an entity ID plus
+inline JSON. Creating or updating the referenced entity remains a separate
+operation on that entity, preserving separate value and membership histories.
+Removing a member changes only the multiset and does not delete the entity.
+
+The current materialized value is a JSON array of references. `insert` appends
+the reference even when it is already present, while `remove` removes one
+matching occurrence. Array order is an implementation detail and is not part
+of the exposed operation contract. This deliberately avoids committing to
+uniqueness or conflict semantics while the collection model is still being
+explored.

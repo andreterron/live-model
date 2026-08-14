@@ -218,4 +218,50 @@ describe('BackendLiveModel', () => {
       metadata: { op_set: { root: 'counter' } },
     });
   });
+
+  test('persists and publishes effects targeting another key', () => {
+    const storage = createStorage();
+    storage.set('todos', {});
+    storage.setMetadata('todos', { op_set: { root: 'collection' } });
+    const collection = buildType('collection').operation(
+      'insert',
+      z.object({ id: z.string(), value: z.unknown() })
+    );
+    const liveModel = new BackendLiveModel(storage);
+    liveModel.operationSetRegistry.register(collection, {
+      insert: (_state, operation, context) => ({
+        effects: [
+          {
+            type: 'set',
+            key: `${context.key}/${operation.data.id}`,
+            value: operation.data.value,
+          },
+        ],
+      }),
+    });
+    const childStates: unknown[] = [];
+    liveModel.forKey('todos/first').subscribe({
+      next: (state) => childStates.push(state),
+    });
+
+    expect(
+      liveModel.processOperation('todos', {
+        type: 'insert',
+        data: { id: 'first', value: { title: 'Write tests' } },
+      })
+    ).toEqual({ type: 'op_status', status: 'success' });
+    expect(storage.get('todos/first')).toEqual({
+      kind: 'value',
+      value: { title: 'Write tests' },
+      metadata: {},
+    });
+    expect(childStates).toEqual([
+      { kind: 'absent', reason: 'not_found' },
+      {
+        kind: 'value',
+        value: { title: 'Write tests' },
+        metadata: {},
+      },
+    ]);
+  });
 });

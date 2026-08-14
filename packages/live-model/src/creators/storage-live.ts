@@ -1,5 +1,4 @@
 import {
-  emptyLiveMetadata,
   liveMetadataSchema,
   LiveState,
   type DefaultOperations,
@@ -11,7 +10,10 @@ import {
   type OperationResult,
 } from '../protocol.js';
 import { BaseLive, toOperation } from '../live.js';
-import { OperationSetRegistry } from '../operation-set-registry.js';
+import {
+  OperationSetRegistry,
+  type OperationSetEffect,
+} from '../operation-set-registry.js';
 import type { Subscriber } from '../reactivity/subscriber.js';
 import type { Subscription } from '../reactivity/subscription.js';
 
@@ -25,6 +27,7 @@ export interface StorageAdapter {
 
 export interface StorageLiveOptions {
   onKeyMembershipChange?(): void;
+  onExternalStateChange?(key: string): void;
   operationSetRegistry?: OperationSetRegistry;
 }
 
@@ -81,46 +84,83 @@ export class StorageLive<
       return this.persistMetadata(parsed.data, currentState);
     }
 
-    const result = this.operationSetRegistry.process(currentState, operation);
+    const result = this.operationSetRegistry.process(currentState, operation, {
+      key: this.key,
+    });
     if (result.status === 'error') {
       return result;
     }
 
-    if (result.action === 'unchanged') {
+    return this.persistEffects(result.effects, existedBefore);
+  }
+
+  refresh(): void {
+    this.notifyLiveState(this.get());
+  }
+
+  private persistEffects(
+    effects: readonly OperationSetEffect[],
+    currentKeyExistedBefore: boolean
+  ): OperationResult {
+    if (effects.length === 0) {
       return { status: 'success' };
     }
 
-    if (result.action === 'delete') {
-      return this.persistDelete(existedBefore);
+    const existedBefore = new Map<string, boolean>([
+      [this.key, currentKeyExistedBefore],
+    ]);
+    const changedKeys = new Set<string>();
+    let currentKeyWasDeleted = false;
+
+    // TODO: Let adapters apply the complete effect list atomically.
+    for (const effect of effects) {
+      if (!existedBefore.has(effect.key)) {
+        existedBefore.set(
+          effect.key,
+          this.storage.get(effect.key).kind === 'value'
+        );
+      }
+
+      const persisted =
+        effect.type === 'set'
+          ? this.storage.set(effect.key, effect.value)
+          : effect.type === 'set_metadata'
+          ? this.storage.setMetadata(effect.key, effect.metadata)
+          : this.storage.delete(effect.key);
+
+      if (!persisted) {
+        return operationError(
+          'operation_failed',
+          'Operation could not be persisted'
+        );
+      }
+
+      changedKeys.add(effect.key);
+      if (effect.key === this.key) {
+        currentKeyWasDeleted = effect.type === 'delete';
+      }
     }
 
-    return this.persistValue(
-      result.value,
-      existedBefore,
-      currentState.kind === 'loading'
-        ? emptyLiveMetadata
-        : currentState.metadata ?? emptyLiveMetadata
-    );
-  }
-
-  // TODO: Move persistence of processing effects into a reusable processor.
-  private persistValue(
-    value: unknown,
-    existedBefore: boolean,
-    metadata: LiveMetadata
-  ): OperationResult {
-    const persisted = this.storage.set(this.key, value);
-
-    if (!persisted) {
-      return operationError(
-        'operation_failed',
-        'Operation could not be persisted'
+    if (changedKeys.has(this.key)) {
+      this.notifyLiveState(
+        currentKeyWasDeleted
+          ? LiveState.absent('deleted')
+          : (this.storage.get(this.key) as LiveState<T>)
       );
     }
 
-    this.notifyLiveState(LiveState.value(value as T, metadata));
+    for (const key of changedKeys) {
+      if (key !== this.key) {
+        this.options.onExternalStateChange?.(key);
+      }
+    }
 
-    if (!existedBefore) {
+    if (
+      [...changedKeys].some(
+        (key) =>
+          existedBefore.get(key) !== (this.storage.get(key).kind === 'value')
+      )
+    ) {
       this.options.onKeyMembershipChange?.();
     }
 
@@ -147,24 +187,6 @@ export class StorageLive<
             metadata
           );
     this.notifyLiveState(state);
-    return { status: 'success' };
-  }
-
-  // TODO: Move persistence of processing effects into a reusable processor.
-  private persistDelete(existedBefore: boolean): OperationResult {
-    if (!this.storage.delete(this.key)) {
-      return operationError(
-        'operation_failed',
-        'Operation could not be persisted'
-      );
-    }
-
-    this.notifyLiveState(LiveState.absent('deleted'));
-
-    if (existedBefore) {
-      this.options.onKeyMembershipChange?.();
-    }
-
     return { status: 'success' };
   }
 }

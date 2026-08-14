@@ -81,6 +81,10 @@ export interface BackendLiveModelOptions {
 export class BackendLiveModel {
   readonly operationSetRegistry: OperationSetRegistry;
   private readonly livesByKey = new Map<string, Live<unknown>>();
+  private readonly storageLivesByKey = new Map<
+    string,
+    StorageLive<unknown, Operation>
+  >();
   private readonly allKeysLive: AllKeysLive;
   private readonly createLive: BackendLiveFactory;
   private readonly referenceCodec = new LiveReferenceCodec((key) =>
@@ -97,11 +101,19 @@ export class BackendLiveModel {
     this.referenceCodec.register(allKeysKey, this.allKeysLive);
     this.createLive =
       options.createLive ??
-      (<T>(key: string) =>
-        new StorageLive<T, Operation>(key, this.storage, {
+      (<T>(key: string) => {
+        const live = new StorageLive<T, Operation>(key, this.storage, {
           onKeyMembershipChange: () => this.allKeysLive.refresh(),
+          onExternalStateChange: (changedKey) =>
+            this.storageLivesByKey.get(changedKey)?.refresh(),
           operationSetRegistry: this.operationSetRegistry,
-        }));
+        });
+        this.storageLivesByKey.set(
+          key,
+          live as StorageLive<unknown, Operation>
+        );
+        return live;
+      });
   }
 
   forKey<T = unknown>(key: string): Live<T> {

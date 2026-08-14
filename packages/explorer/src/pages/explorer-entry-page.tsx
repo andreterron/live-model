@@ -1,4 +1,5 @@
 import {
+  liveReference,
   useLiveModelClient,
   type LiveState,
   type Operation,
@@ -35,7 +36,11 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const value = state.kind === 'value' ? state.value : undefined;
+  const value = useMemo(
+    () =>
+      state.kind === 'value' ? client.encodeReferences(state.value) : undefined,
+    [client, state]
+  );
   const isMissing = state.kind === 'absent';
   const operationDefinition = operationSet?.operations[operationType];
 
@@ -54,7 +59,16 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
   }, [operationSet, operationType, value]);
 
   const updateOperationSet = (nextId: string) => {
-    live.setMetadata({ op_set: { root: nextId } });
+    const result = live.op({
+      type: 'set_metadata',
+      data: { op_set: { root: nextId } },
+    });
+    if (result.status === 'error') {
+      setError(result.error.message);
+      setStatus(undefined);
+      return;
+    }
+
     setStatus(`Operation set changed to ${nextId}`);
     setError(undefined);
   };
@@ -169,6 +183,7 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
 
         {operationDefinition?.hasArgument ? (
           <OperationArgument
+            operationSetName={operationSet.name}
             operationType={operationType}
             value={argument}
             onChange={(nextValue) => {
@@ -183,6 +198,14 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
           <p className="text-destructive text-sm">
             Increment requires an existing numeric value. Select Default and
             execute set value first.
+          </p>
+        ) : null}
+
+        {operationSet.name === 'multiset' ? (
+          <p className="text-muted-foreground text-xs">
+            Insert appends a reference, including duplicates. Remove deletes one
+            matching occurrence. Create or update the referenced entity
+            separately.
           </p>
         ) : null}
 
@@ -253,7 +276,11 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
       <section className="grid gap-2">
         <h2 className="text-sm font-semibold">Current state</h2>
         <pre className="bg-muted/30 min-h-24 overflow-x-auto rounded-md border p-4 font-mono text-sm leading-6">
-          {JSON.stringify(state, null, 2)}
+          {JSON.stringify(
+            state.kind === 'value' ? { ...state, value } : state,
+            null,
+            2
+          )}
         </pre>
       </section>
     </main>
@@ -261,10 +288,12 @@ export function ExplorerEntryPage({ entryId }: ExplorerEntryPageProps) {
 }
 
 function OperationArgument({
+  operationSetName,
   operationType,
   value,
   onChange,
 }: {
+  operationSetName: string;
   operationType: string;
   value: string;
   onChange: (value: string) => void;
@@ -280,6 +309,27 @@ function OperationArgument({
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
+      </label>
+    );
+  }
+
+  if (
+    operationSetName === 'multiset' &&
+    (operationType === 'insert' || operationType === 'remove')
+  ) {
+    return (
+      <label className="grid gap-2 text-sm font-semibold">
+        Entity key
+        <input
+          className={inputClassName}
+          type="text"
+          value={value}
+          placeholder="todos/first"
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span className="text-muted-foreground text-xs font-normal">
+          Explorer will send this as a root Live reference.
+        </span>
       </label>
     );
   }
@@ -316,6 +366,15 @@ function createOperation(
   let value: unknown;
   if (operationSet.name === 'counter' && operationType === 'increment') {
     value = argument.trim() === '' ? Number.NaN : Number(argument);
+  } else if (
+    operationSet.name === 'multiset' &&
+    (operationType === 'insert' || operationType === 'remove')
+  ) {
+    const memberKey = argument.trim();
+    if (memberKey === '') {
+      return { status: 'error', error: 'Entity key is required' };
+    }
+    value = liveReference(memberKey);
   } else {
     const parsedJson = parseJson(argument);
     if (parsedJson.status === 'invalid') {

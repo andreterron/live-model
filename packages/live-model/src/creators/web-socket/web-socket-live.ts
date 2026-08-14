@@ -58,28 +58,46 @@ export class WebSocketLive<T> extends BaseLive<T> {
       return super.op(operation);
     }
 
-    const result = this.operationSetRegistry.process(this.state, operation);
+    const result = this.operationSetRegistry.process(this.state, operation, {
+      key: this.key,
+    });
     if (result.status === 'error') {
       return result;
     }
 
     this.sendOperation(operation);
-    if (result.action === 'unchanged') {
-      return { status: 'success' };
+    let changed = false;
+    for (const effect of result.effects) {
+      if (effect.key !== this.key) {
+        continue;
+      }
+
+      changed = true;
+      if (effect.type === 'delete') {
+        const metadata =
+          this.state.kind === 'loading' ? undefined : this.state.metadata;
+        this.state = LiveState.absent('deleted', undefined, metadata);
+      } else if (effect.type === 'set_metadata') {
+        this.state =
+          this.state.kind === 'value'
+            ? LiveState.value(this.state.value, effect.metadata)
+            : LiveState.absent(
+                this.state.kind === 'absent' ? this.state.reason : undefined,
+                this.state.kind === 'absent' ? this.state.error : undefined,
+                effect.metadata
+              );
+      } else {
+        const metadata =
+          this.state.kind === 'loading'
+            ? emptyLiveMetadata
+            : this.state.metadata ?? emptyLiveMetadata;
+        this.state = LiveState.value(effect.value as T, metadata);
+      }
     }
 
-    if (result.action === 'delete') {
-      const metadata =
-        this.state.kind === 'loading' ? undefined : this.state.metadata;
-      this.state = LiveState.absent('deleted', undefined, metadata);
-    } else {
-      const metadata =
-        this.state.kind === 'loading'
-          ? emptyLiveMetadata
-          : this.state.metadata ?? emptyLiveMetadata;
-      this.state = LiveState.value(result.value as T, metadata);
+    if (changed) {
+      this.notifyLiveState(this.state);
     }
-    this.notifyLiveState(this.state);
     return { status: 'success' };
   }
 

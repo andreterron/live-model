@@ -14,24 +14,19 @@ import { useState } from 'react';
 import type { Route } from './+types/root';
 import './app.css';
 import { ThemeProvider } from './components/theme-provider';
-import { counterOperationSet } from './lib/operation-sets';
+import {
+  counterOperationSet,
+  multisetOperationSet,
+} from './lib/operation-sets';
+import { getLiveModelWebSocketUrl } from './lib/live-model-websocket-url';
 
-const websocketUrl =
-  typeof window === 'undefined'
-    ? 'ws://127.0.0.1:3001/'
-    : (() => {
-        const url = new URL(window.location.href);
-        url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-        if (url.port) url.port = '3001';
-        url.pathname = '/';
-        url.search = '';
-        url.hash = '';
-        return url;
-      })();
-
-const operationSetRegistry = new OperationSetRegistry().register(
-  counterOperationSet
+const websocketUrl = getLiveModelWebSocketUrl(
+  typeof window === 'undefined' ? undefined : window.location
 );
+
+const operationSetRegistry = new OperationSetRegistry()
+  .register(counterOperationSet)
+  .register(multisetOperationSet);
 
 configureLiveModel({
   websocketUrl,

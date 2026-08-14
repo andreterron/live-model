@@ -18,6 +18,7 @@
 
 # Operations / Messages
 
+- Restructure metadata field to be: `{root: {op_set, ...}, props: { op_set, ... } }`. Feels like a better grouping.
 - Choose where to define the link between a Live and its supported operations. Is this in code, and the Live<...> needs to have the right operation types? Or is this in the data, and a special property (supported_ops, type, etc) would define the supported operations?
 - Split "operations" (change data) and "messages" (includes subscriptions, reads, and operations)
 - For either messages or operations, consider sending a result back. Or include metadata linking to the message/operation on the state/message returned

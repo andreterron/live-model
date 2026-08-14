@@ -69,17 +69,33 @@ The shared registry validates operations and runs their reducers.
 Storage-backed Lives resolve the registry ID from current persisted metadata
 for every operation, so `set_metadata` changes dispatch immediately. A missing
 reducer accepts the operation without changing state. Explicit registration
-handlers can produce non-value effects such as deletion. See
+handlers can return keyed `set`, `set_metadata`, and `delete` effects. See
 [Shared operation-set registry and processing](../decisions/2026-08-13-operation-set-registry.md).
 
 Each registry automatically includes a `default` operation set with
 `set_value` and `delete`. It is selected when metadata has no root assignment;
 assigning another set removes those operations unless it declares them too.
 
-The initial `OperationSetProcessingResult` only describes effects on the
-current key (`unchanged`, `set`, or `delete`). It cannot yet represent an array
-`insert` that materializes as a SQL query creating another row. Collection
-effects need a follow-up design after the website operation-set experiment.
+`OperationSetProcessingResult` contains a list of declarative, keyed effects.
+This lets an array `insert` create another storage row while leaving the
+collection key unchanged. Effects are currently applied directly and
+sequentially through `StorageAdapter`; they still need an atomic transaction
+boundary.
+
+The intended longer-term design treats operation history as the source of
+truth and uses storage-specific projectors/materializers to create SQLite rows
+or other queryable views. Declarative effects are an incremental bridge toward
+that architecture, not a replacement for durable history and replayable
+projections.
+
+The website Explorer prototypes a `multiset` operation set whose `insert` and
+`remove` operations accept root Live references. Entity creation and updates
+remain operations on the referenced entity; `remove` changes membership only.
+The materialized value is a JSON reference array: insertion permits duplicates
+and removal deletes one matching occurrence. Its stored array order is not part
+of the operation contract. A later client convenience API may batch entity
+creation and membership insertion while retaining the two independent
+histories.
 
 Property operation-set assignments are not supported yet. Properties are
 ordinary JSON fields whose changes become `set_value` on the root Live; they do

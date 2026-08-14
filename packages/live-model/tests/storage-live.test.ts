@@ -185,7 +185,9 @@ describe('StorageLive', () => {
       .operation('set_value', z.number(), (_state: number, value) => value)
       .operation('delete');
     const registry = new OperationSetRegistry().register(mutableNumber, {
-      delete: () => ({ action: 'delete' }),
+      delete: (_state, _operation, context) => ({
+        effects: [{ type: 'delete', key: context.key }],
+      }),
     });
     const live = new StorageLive<number, Operation>('value', storage, {
       operationSetRegistry: registry,

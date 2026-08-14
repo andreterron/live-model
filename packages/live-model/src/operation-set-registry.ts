@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { LiveState, Operation, OperationError } from './protocol.js';
+import type {
+  LiveMetadata,
+  LiveState,
+  Operation,
+  OperationError,
+} from './protocol.js';
 import {
   buildType,
   parseTypeOperation,
@@ -9,22 +14,34 @@ import {
 } from './type-definition.js';
 
 export type OperationSetEffect =
-  | { readonly action: 'unchanged' }
-  | { readonly action: 'set'; readonly value: unknown }
-  | { readonly action: 'delete' };
+  | { readonly type: 'set'; readonly key: string; readonly value: unknown }
+  | {
+      readonly type: 'set_metadata';
+      readonly key: string;
+      readonly metadata: LiveMetadata;
+    }
+  | { readonly type: 'delete'; readonly key: string };
 
 export type OperationSetProcessingResult =
-  | ({ readonly status: 'success' } & OperationSetEffect)
+  | {
+      readonly status: 'success';
+      readonly effects: readonly OperationSetEffect[];
+    }
   | { readonly status: 'error'; readonly error: OperationError };
 
 export type OperationSetHandlerResult =
-  | OperationSetEffect
-  | { readonly action: 'error'; readonly error: OperationError };
+  | { readonly effects: readonly OperationSetEffect[] }
+  | { readonly error: OperationError };
+
+export interface OperationSetProcessingContext {
+  readonly key: string;
+}
 
 export type OperationSetHandlers<Definition extends TypeDefinition> = Partial<{
   [Name in keyof Definition['operations'] & string]: (
     state: LiveState<unknown>,
-    operation: Extract<OperationOfType<Definition>, { type: Name }>
+    operation: Extract<OperationOfType<Definition>, { type: Name }>,
+    context: OperationSetProcessingContext
   ) => OperationSetHandlerResult;
 }>;
 
@@ -35,7 +52,8 @@ interface OperationSetRegistration {
       string,
       (
         state: LiveState<unknown>,
-        operation: Operation
+        operation: Operation,
+        context: OperationSetProcessingContext
       ) => OperationSetHandlerResult
     >
   >;
@@ -49,11 +67,12 @@ export const defaultOperationSet = buildType('default')
 export const defaultOperationSetHandlers: OperationSetHandlers<
   typeof defaultOperationSet
 > = {
-  set_value: (_state, operation) => ({
-    action: 'set',
-    value: operation.data,
+  set_value: (_state, operation, context) => ({
+    effects: [{ type: 'set', key: context.key, value: operation.data }],
   }),
-  delete: () => ({ action: 'delete' }),
+  delete: (_state, _operation, context) => ({
+    effects: [{ type: 'delete', key: context.key }],
+  }),
 };
 
 /**
@@ -114,7 +133,8 @@ export class OperationSetRegistry {
 
   process(
     state: LiveState<unknown>,
-    operation: Operation
+    operation: Operation,
+    context: OperationSetProcessingContext
   ): OperationSetProcessingResult {
     const id =
       (state.kind === 'loading' ? undefined : state.metadata?.op_set?.root) ??
@@ -156,10 +176,10 @@ export class OperationSetRegistry {
     const handler = registration.handlers[parsedOperation.type];
     if (handler) {
       try {
-        const result = handler(state, parsedOperation);
-        return result.action === 'error'
+        const result = handler(state, parsedOperation, context);
+        return 'error' in result
           ? { status: 'error', error: result.error }
-          : { status: 'success', ...result };
+          : { status: 'success', effects: result.effects };
       } catch (error) {
         return operationError(
           'operation_failed',
@@ -170,7 +190,7 @@ export class OperationSetRegistry {
 
     const definition = registration.definition.operations[parsedOperation.type];
     if (!definition.reducer) {
-      return { status: 'success', action: 'unchanged' };
+      return { status: 'success', effects: [] };
     }
 
     if (state.kind !== 'value') {
@@ -183,12 +203,17 @@ export class OperationSetRegistry {
     try {
       return {
         status: 'success',
-        action: 'set',
-        value: reduceTypeOperation(
-          registration.definition,
-          state.value,
-          parsedOperation
-        ),
+        effects: [
+          {
+            type: 'set',
+            key: context.key,
+            value: reduceTypeOperation(
+              registration.definition,
+              state.value,
+              parsedOperation
+            ),
+          },
+        ],
       };
     } catch (error) {
       return operationError(

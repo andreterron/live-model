@@ -13,15 +13,23 @@ describe('OperationSetRegistry', () => {
     expect(
       registry.process(
         { kind: 'absent', reason: 'not_found' },
-        { type: 'set_value', data: 'created' }
+        { type: 'set_value', data: 'created' },
+        { key: 'entry' }
       )
-    ).toEqual({ status: 'success', action: 'set', value: 'created' });
+    ).toEqual({
+      status: 'success',
+      effects: [{ type: 'set', key: 'entry', value: 'created' }],
+    });
     expect(
       registry.process(
         { kind: 'value', value: 'created', metadata: {} },
-        { type: 'delete' }
+        { type: 'delete' },
+        { key: 'entry' }
       )
-    ).toEqual({ status: 'success', action: 'delete' });
+    ).toEqual({
+      status: 'success',
+      effects: [{ type: 'delete', key: 'entry' }],
+    });
   });
 
   test('lists registered definitions for operation-driven clients', () => {
@@ -48,11 +56,18 @@ describe('OperationSetRegistry', () => {
     };
 
     expect(
-      registry.process(state, {
-        type: 'increment',
-        data: '2',
-      })
-    ).toEqual({ status: 'success', action: 'set', value: 5 });
+      registry.process(
+        state,
+        {
+          type: 'increment',
+          data: '2',
+        },
+        { key: 'counter' }
+      )
+    ).toEqual({
+      status: 'success',
+      effects: [{ type: 'set', key: 'counter', value: 5 }],
+    });
   });
 
   test('returns unchanged when an operation has no reducer or handler', () => {
@@ -66,15 +81,18 @@ describe('OperationSetRegistry', () => {
           value: [],
           metadata: { op_set: { root: 'events' } },
         },
-        { type: 'record', data: 'seen' }
+        { type: 'record', data: 'seen' },
+        { key: 'events' }
       )
-    ).toEqual({ status: 'success', action: 'unchanged' });
+    ).toEqual({ status: 'success', effects: [] });
   });
 
   test('supports explicit handlers for non-value effects', () => {
     const removable = buildType('removable').operation('delete');
     const registry = new OperationSetRegistry().register(removable, {
-      delete: () => ({ action: 'delete' }),
+      delete: (_state, _operation, context) => ({
+        effects: [{ type: 'delete', key: context.key }],
+      }),
     });
 
     expect(
@@ -84,9 +102,13 @@ describe('OperationSetRegistry', () => {
           value: 'present',
           metadata: { op_set: { root: 'removable' } },
         },
-        { type: 'delete' }
+        { type: 'delete' },
+        { key: 'entry' }
       )
-    ).toEqual({ status: 'success', action: 'delete' });
+    ).toEqual({
+      status: 'success',
+      effects: [{ type: 'delete', key: 'entry' }],
+    });
   });
 
   test('distinguishes unknown sets, unsupported operations, and invalid data', () => {
@@ -101,23 +123,32 @@ describe('OperationSetRegistry', () => {
     expect(
       registry.process(
         { ...state, metadata: { op_set: { root: 'missing' } } },
-        { type: 'increment', data: 1 }
+        { type: 'increment', data: 1 },
+        { key: 'counter' }
       )
     ).toMatchObject({
       status: 'error',
       error: { code: 'unknown_operation_set' },
     });
     expect(
-      registry.process(state, { type: 'set_value', data: 2 })
+      registry.process(
+        state,
+        { type: 'set_value', data: 2 },
+        { key: 'counter' }
+      )
     ).toMatchObject({
       status: 'error',
       error: { code: 'unsupported_operation' },
     });
     expect(
-      registry.process(state, {
-        type: 'increment',
-        data: 'invalid',
-      })
+      registry.process(
+        state,
+        {
+          type: 'increment',
+          data: 'invalid',
+        },
+        { key: 'counter' }
+      )
     ).toMatchObject({
       status: 'error',
       error: { code: 'invalid_operation' },
@@ -133,7 +164,7 @@ describe('OperationSetRegistry', () => {
     );
     expect(() =>
       new OperationSetRegistry().register(counter, {
-        missing: () => ({ action: 'unchanged' }),
+        missing: () => ({ effects: [] }),
       } as never)
     ).toThrow('Handler "missing" is not defined by operation set "counter"');
   });

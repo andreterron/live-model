@@ -30,6 +30,17 @@ export default defineConfig({
     port: Number(process.env.PORT ?? 4200),
     strictPort: process.env.PORT !== undefined,
     host: 'localhost',
+    proxy: {
+      // The public tunnel forwards every websocket to this website process.
+      // Give Live Model a distinct path so Vite can forward it to the protocol
+      // server without interfering with Vite's own HMR websocket.
+      '/live-model': {
+        target: `ws://127.0.0.1:${
+          process.env.LIVE_MODEL_SERVER_PORT ?? '3001'
+        }`,
+        ws: true,
+      },
+    },
     // Every module is mutable while the workspace watch builds are running.
     // In particular, /@fs package output must never retain Vite's default
     // four-hour cache lifetime through the public tunnel.
