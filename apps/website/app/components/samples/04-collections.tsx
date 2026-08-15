@@ -2,7 +2,9 @@ import { useLiveState, useModel, type LiveModelType } from 'live-model';
 import { BooleanControl } from './controls';
 import { CardRow } from '../card-row';
 import { Card } from '../ui/card';
-import { ArrowUpDownIcon, ChevronsUpDownIcon, TrashIcon } from 'lucide-react';
+import ArrowUpDownIcon from 'lucide-react/dist/esm/icons/arrow-up-down.js';
+import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.js';
+import TrashIcon from 'lucide-react/dist/esm/icons/trash.js';
 import { useCallback } from 'react';
 import { Button } from '../ui/button';
 

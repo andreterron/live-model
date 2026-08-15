@@ -1,5 +1,7 @@
 import { generateId, useAllKeys, useLiveModelClient } from 'live-model';
-import { Clock3, Database, Plus } from 'lucide-react';
+import Clock3 from 'lucide-react/dist/esm/icons/clock-3.js';
+import Database from 'lucide-react/dist/esm/icons/database.js';
+import Plus from 'lucide-react/dist/esm/icons/plus.js';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 

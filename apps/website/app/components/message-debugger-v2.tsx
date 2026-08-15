@@ -6,14 +6,12 @@ import type {
   DebuggerOperationRecord,
 } from '../lib/in-memory-message-debugger';
 import { InMemoryMessageDebugger } from '../lib/in-memory-message-debugger';
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  Send,
-  X,
-} from 'lucide-react';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.js';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.js';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.js';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.js';
+import Send from 'lucide-react/dist/esm/icons/send.js';
+import X from 'lucide-react/dist/esm/icons/x.js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 

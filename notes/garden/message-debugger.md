@@ -48,14 +48,15 @@ the lifetime of the page.
   WebSocket traffic still worked, which left existing browser tabs silently
   stale. A tunnel regression test now covers the upstream and forwarded hosts.
 
-- The website's Vite dependency optimizer uses an explicit, fixed set of React
-  runtime entries and disables late dependency discovery. Through the tunnel, a
-  long-lived tab did not reliably receive Vite's full-reload notification when
-  a newly visited route expanded the optimized dependency set. That left React
-  hooks and React DOM loaded from different optimizer generations (visible as
-  different `?v=` hashes), causing invalid hook calls and preserving stale
-  debugger class instances. ESM dependencies remain loaded normally, and this
-  does not alias workspace packages to their source trees.
+- The website's Vite dependency optimizer explicitly scans every website route
+  and the linked explorer source tree before serving the first page, while React
+  runtime entries remain pinned in `optimizeDeps.include`. A long-lived tunneled
+  tab therefore does not expand the optimizer generation merely by visiting a
+  new route, but other dependencies can still be pre-bundled normally. The
+  previous `noDiscovery` workaround exposed ESM barrel modules directly; Lucide's
+  barrel caused the browser to request its full icon graph. Lucide imports now
+  target individual ESM icon modules so only icons used by a route enter its
+  browser graph.
 
 - The website route is `/debugger`, with a route layout and index page so later
   debugger views can be nested beneath it.

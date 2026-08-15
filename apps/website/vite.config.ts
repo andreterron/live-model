@@ -12,12 +12,16 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    // The tunnel can keep a browser tab alive while workspace packages rebuild.
-    // Discovering another dependency later changes Vite's browser hash, which can
-    // leave that tab running React and React DOM from different optimizer runs.
-    // React is the only CommonJS dependency that needs pre-bundling here; ESM
-    // dependencies can continue to load directly without late re-optimization.
-    noDiscovery: true,
+    // Scan every route and the linked explorer package before serving the first
+    // page. This keeps route changes from expanding the optimizer generation in
+    // long-lived tunneled tabs without disabling optimization for ESM packages.
+    entries: [
+      'app/root.tsx',
+      'app/routes/**/*.tsx',
+      'app/components/**/*.tsx',
+      '../../packages/explorer/src/**/*.{ts,tsx}',
+      '!../../packages/explorer/src/**/*.{test,spec}.{ts,tsx}',
+    ],
     include: [
       'react',
       'react/jsx-runtime',

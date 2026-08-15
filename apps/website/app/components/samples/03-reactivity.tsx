@@ -2,7 +2,8 @@ import { useLiveState } from 'live-model';
 import { BooleanControl } from './controls';
 import { CardRow } from '../card-row';
 import { Card } from '../ui/card';
-import { ArrowUpDownIcon, ChevronsUpDownIcon } from 'lucide-react';
+import ArrowUpDownIcon from 'lucide-react/dist/esm/icons/arrow-up-down.js';
+import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.js';
 
 export function ReactivitySample() {
   const { value: v1, setValue: setV1 } = useLiveState(

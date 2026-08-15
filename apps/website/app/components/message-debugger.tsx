@@ -5,16 +5,14 @@ import type {
   DebuggerOperationRecord,
 } from '../lib/in-memory-message-debugger';
 import { InMemoryMessageDebugger } from '../lib/in-memory-message-debugger';
-import {
-  ArrowDownLeft,
-  ArrowRight,
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  Send,
-  Trash2,
-} from 'lucide-react';
+import ArrowDownLeft from 'lucide-react/dist/esm/icons/arrow-down-left.js';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.js';
+import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right.js';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.js';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.js';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.js';
+import Send from 'lucide-react/dist/esm/icons/send.js';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2.js';
 import { useEffect, useState } from 'react';
 
 import { Button } from './ui/button';

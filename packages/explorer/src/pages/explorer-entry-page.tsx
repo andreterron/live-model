@@ -5,7 +5,10 @@ import {
   type Operation,
   type TypeDefinition,
 } from 'live-model';
-import { ArrowLeft, Play, RotateCcw, Trash2 } from 'lucide-react';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left.js';
+import Play from 'lucide-react/dist/esm/icons/play.js';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.js';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2.js';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate } from 'react-router';
 

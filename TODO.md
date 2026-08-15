@@ -1,5 +1,6 @@
 # Needs manual testing and review
 
+- Dev setup: Through `live-model.terron.ai`, verify that navigating among all website routes keeps React and React DOM on one Vite optimizer generation with `optimizeDeps.entries`, and confirm that removing `noDiscovery` does not reintroduce invalid hook calls or stale modules.
 - References: Add an Explorer flow that can create, display, edit, and follow references, then manually review reference resolution and write-back behavior.
 - Queries: Add an Explorer query-testing surface, then manually review query subscription, result, and cancellation behavior.
 
