@@ -32,7 +32,15 @@
 
 # Queries
 
-- Refactor `EntitiesQuerySource.query` to return entity references. A query should own result membership, range, and ordering; subscribing to and loading each referenced Live should be handled separately.
+- Support querying entity keys and metadata, potentially through reserved `_id` and `_metadata` filter fields.
+- Refactor `BackendLiveModel.query` to return entity references. A query should own result membership, range, and ordering; subscribing to and loading each referenced Live should be handled separately.
+- Add Postgres query translation and execution.
+- Ensure keys with dots are supported.
+- Make queries paginated by default.
+- Add an iterator query API for incremental result consumption.
+- Support deep or GraphQL-like queries.
+- Support automatically updating query membership and results when entities change.
+- Support entities whose values are query results.
 
 ## Request handler
 

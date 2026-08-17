@@ -16,6 +16,12 @@ import {
 } from '../operation-set-registry.js';
 import type { Subscriber } from '../reactivity/subscriber.js';
 import type { Subscription } from '../reactivity/subscription.js';
+import type { NormalizedLiveQuery } from '../query/query-language.js';
+
+export interface StorageQueryResult {
+  keys: string[];
+  hasMore: boolean;
+}
 
 export interface StorageAdapter {
   get(key: string): LiveState<unknown>;
@@ -23,6 +29,7 @@ export interface StorageAdapter {
   set(key: string, data: unknown): boolean;
   setMetadata(key: string, metadata: LiveMetadata): boolean;
   delete(key: string): boolean;
+  queryKeys?(query: NormalizedLiveQuery<unknown>): StorageQueryResult;
 }
 
 export interface StorageLiveOptions {

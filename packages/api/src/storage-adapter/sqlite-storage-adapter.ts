@@ -1,4 +1,12 @@
-import type { LiveMetadata, LiveState, StorageAdapter } from 'live-model';
+import {
+  allKeysKey,
+  compileSQLiteQuery,
+  type LiveMetadata,
+  type LiveState,
+  type NormalizedLiveQuery,
+  type StorageAdapter,
+  type StorageQueryResult,
+} from 'live-model';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 
 export class SQLiteStorageAdapter implements StorageAdapter {
@@ -90,5 +98,25 @@ export class SQLiteStorageAdapter implements StorageAdapter {
   delete(key: string): boolean {
     this.deleteEntity.run(key);
     return true;
+  }
+
+  queryKeys(query: NormalizedLiveQuery<unknown>): StorageQueryResult {
+    const compiled = compileSQLiteQuery(query.filter);
+    const statement = this.database.prepare(
+      `SELECT key FROM entities ` +
+        `WHERE key <> ? AND (${compiled.sql}) ` +
+        `ORDER BY key LIMIT ?`
+    );
+    const rows = statement.all(
+      allKeysKey,
+      ...(compiled.params as Array<string | number | null | Uint8Array>),
+      query.limit + 1
+    );
+    const hasMore = rows.length > query.limit;
+
+    return {
+      keys: rows.slice(0, query.limit).map((row) => row.key as string),
+      hasMore,
+    };
   }
 }

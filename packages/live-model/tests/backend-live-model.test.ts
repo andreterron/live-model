@@ -95,6 +95,19 @@ describe('BackendLiveModel', () => {
     ).toMatchObject({ status: 'error' });
   });
 
+  test('defaults and caps query limits before storage execution', () => {
+    const storage = createStorage();
+    const queryKeys = vi.fn(() => ({ keys: [], hasMore: false }));
+    storage.queryKeys = queryKeys;
+    const liveModel = new BackendLiveModel(storage);
+
+    liveModel.query({ filter: {} }).subscribe({ next: vi.fn() });
+    expect(queryKeys).toHaveBeenLastCalledWith({ filter: {}, limit: 100 });
+
+    liveModel.query({ filter: {}, limit: 20_000 }).subscribe({ next: vi.fn() });
+    expect(queryKeys).toHaveBeenLastCalledWith({ filter: {}, limit: 10_000 });
+  });
+
   test('resolves stored references to canonical lazy Lives', () => {
     const storage = createStorage();
     storage.set('people.ada', { name: 'Ada' });

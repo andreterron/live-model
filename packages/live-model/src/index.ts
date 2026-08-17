@@ -11,9 +11,9 @@ export * from './creators/web-socket/web-socket-live.js';
 export * from './operators/map.js';
 
 // Query
-export * from './query/entities-query-source.js';
-export * from './query/web-socket-query-source.js';
-export type * from './query/query-source.js';
+export * from './query/query-language.js';
+export * from './query/sqlite-query.js';
+export type * from './query/query-result.js';
 
 // Reactivity
 export type * from './reactivity/subscriber.js';

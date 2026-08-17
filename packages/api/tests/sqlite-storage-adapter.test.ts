@@ -1,5 +1,5 @@
 import { liveReference } from 'live-model';
-import { BackendLiveModel, type Live } from 'live-model';
+import { BackendLiveModel, type Live, type LiveFilter } from 'live-model';
 import { SQLiteStorageAdapter } from '../src/storage-adapter/sqlite-storage-adapter.js';
 
 describe('SQLiteStorageAdapter', () => {
@@ -71,4 +71,123 @@ describe('SQLiteStorageAdapter', () => {
       metadata: {},
     });
   });
+
+  test.each<[string, LiveFilter<unknown>, string[]]>([
+    ['nested equality', { 'profile.name': 'Ada' }, ['people.ada']],
+    ['numeric comparison', { score: { $gte: 10 } }, ['people.ada']],
+    [
+      'bounded numeric comparison',
+      { score: { $gt: 10, $lte: 12 } },
+      ['people.ada'],
+    ],
+    ['boolean inequality', { active: { $ne: false } }, ['people.ada']],
+    ['membership', { status: { $in: ['active', 'paused'] } }, ['people.ada']],
+    ['negative membership', { status: { $nin: ['archived'] } }, ['people.ada']],
+    ['array contains', { tags: { $contains: 'typescript' } }, ['people.ada']],
+    ['array index', { 'revisions.1': { $eq: 'final' } }, ['people.ada']],
+    ['starts with', { title: { $startsWith: 'Intro' } }, ['people.ada']],
+    [
+      'case-insensitive contains',
+      { title: { $containsText: { value: 'LIVE', caseSensitive: false } } },
+      ['people.ada'],
+    ],
+    [
+      'case-insensitive ends with',
+      { title: { $endsWith: { value: 'MODEL', caseSensitive: false } } },
+      ['people.ada'],
+    ],
+    [
+      'boolean composition',
+      { $and: [{ score: { $gt: 5 } }, { active: true }] },
+      ['people.ada'],
+    ],
+    [
+      'or composition',
+      { $or: [{ score: { $lt: 5 } }, { active: true }] },
+      ['people.ada', 'people.grace'],
+    ],
+    [
+      'nor composition',
+      { $nor: [{ score: { $lt: 5 } }, { active: false }] },
+      ['people.ada'],
+    ],
+  ])('queries JSON values using %s', (_name, query, expectedKeys) => {
+    const storage = queryStorage();
+
+    expect(storage.queryKeys({ filter: query, limit: 100 })).toEqual({
+      keys: expectedKeys,
+      hasMore: false,
+    });
+  });
+
+  test('caps a query result and reports additional matches', () => {
+    const storage = queryStorage();
+
+    expect(storage.queryKeys({ filter: {}, limit: 1 })).toEqual({
+      keys: ['people.ada'],
+      hasMore: true,
+    });
+  });
+
+  test('returns query results through a Live', () => {
+    const storage = queryStorage();
+    const liveModel = new BackendLiveModel(storage);
+    const states: unknown[] = [];
+
+    liveModel.query({ filter: { active: true } }).subscribe({
+      next: (state) => states.push(state),
+    });
+
+    expect(states).toEqual([
+      { kind: 'loading' },
+      {
+        kind: 'value',
+        value: {
+          items: [
+            {
+              key: 'people.ada',
+              state: {
+                kind: 'value',
+                value: {
+                  profile: { name: 'Ada' },
+                  score: 12,
+                  status: 'active',
+                  tags: ['typescript', 'data'],
+                  revisions: ['draft', 'final'],
+                  title: 'Introduction to Live Model',
+                  active: true,
+                },
+                metadata: {},
+              },
+            },
+          ],
+          range: { hasMore: false },
+        },
+        metadata: {},
+      },
+    ]);
+  });
 });
+
+function queryStorage(): SQLiteStorageAdapter {
+  const storage = new SQLiteStorageAdapter(':memory:');
+  storage.set('people.ada', {
+    profile: { name: 'Ada' },
+    score: 12,
+    status: 'active',
+    tags: ['typescript', 'data'],
+    revisions: ['draft', 'final'],
+    title: 'Introduction to Live Model',
+    active: true,
+  });
+  storage.set('people.grace', {
+    profile: { name: 'Grace' },
+    score: 4,
+    status: 'archived',
+    tags: ['systems'],
+    revisions: ['draft'],
+    title: 'Compilers',
+    active: false,
+  });
+  return storage;
+}

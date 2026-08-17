@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { LiveQuery } from './query/query-language.js';
 
 export const allKeysKey = '_livemodel.all_keys';
 
@@ -243,8 +244,12 @@ export const queryMessageSchema = z.object({
   type: z.literal('query'),
   queryId: z.string(),
   data_source: z.literal('entities'),
-  // TODO: Define the query language.
-  query: z.any().refine((value) => value !== undefined, 'query is required'),
+  query: z.object({
+    // Filter operator validation is owned by the UCAST parser during execution.
+    // TODO: Consider adding query type validation here.
+    filter: z.record(z.unknown()),
+    limit: z.number().finite().nonnegative().optional(),
+  }),
 });
 
 export const unqueryMessageSchema = z.object({
@@ -420,11 +425,11 @@ export interface UnsubscribeMessage extends Message {
   targets?: any;
 }
 
-export interface QueryMessage<Q = unknown> extends Message {
+export interface QueryMessage<T = unknown> extends Message {
   type: 'query';
   queryId: string;
   data_source: 'entities';
-  query: Q;
+  query: LiveQuery<T>;
 }
 
 export interface UnqueryMessage extends Message {
@@ -455,6 +460,5 @@ export interface QuerySnapshotMessage<T = unknown> extends Message {
   }>;
   range: {
     hasMore: boolean;
-    cursor?: string;
   };
 }

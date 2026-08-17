@@ -229,9 +229,10 @@ Current files: `packages/live-model/src/model/model.ts`,
 Defines query sources, maintains query result membership, and transports query
 subscriptions and snapshots.
 
-Current files: `packages/live-model/src/query/query-source.ts`,
-`packages/live-model/src/query/entities-query-source.ts`,
-`packages/live-model/src/query/web-socket-query-source.ts`.
+Current files: `packages/live-model/src/query/query-language.ts`,
+`packages/live-model/src/query/query-result.ts`,
+`packages/live-model/src/query/entities-query-live.ts`,
+`packages/live-model/src/query/web-socket-query-live.ts`.
 
 ### Framework integration
 

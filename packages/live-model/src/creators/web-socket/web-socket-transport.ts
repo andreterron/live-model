@@ -11,6 +11,7 @@ import {
   type StateMessage,
 } from '../../protocol.js';
 import type { Subscription } from '../../reactivity/subscription.js';
+import type { LiveQuery } from '../../query/query-language.js';
 
 export interface WebSocketTransportOptions {
   protocols?: string | string[];
@@ -24,8 +25,8 @@ export interface WebSocketTransportSubscriber {
   open?(): void;
 }
 
-export interface WebSocketQuerySubscriber {
-  message(message: QuerySnapshotMessage): void;
+export interface WebSocketQuerySubscriber<T = unknown> {
+  message(message: QuerySnapshotMessage<T>): void;
   close?(event: CloseEvent): void;
   error?(event: Event): void;
   open?(): void;
@@ -117,10 +118,10 @@ export class WebSocketTransport {
     return connection;
   }
 
-  query(
+  query<T = unknown>(
     queryId: string,
-    query: unknown,
-    subscriber: WebSocketQuerySubscriber
+    query: LiveQuery<T>,
+    subscriber: WebSocketQuerySubscriber<T>
   ): Subscription {
     this.cancelCloseSocketTimeout();
     this.querySubscribersById.set(queryId, subscriber);
@@ -128,7 +129,7 @@ export class WebSocketTransport {
       type: 'query',
       queryId,
       data_source: 'entities',
-      query,
+      query: query as LiveQuery<unknown>,
     });
 
     return {

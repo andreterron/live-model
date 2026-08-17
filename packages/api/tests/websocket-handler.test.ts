@@ -1,7 +1,7 @@
 import { liveReference, type ProtocolMessage } from 'live-model';
 import type { Message as WebSocketMessage, Peer } from 'crossws';
 import { BackendLiveModel } from 'live-model';
-import type { QuerySource, StorageAdapter } from 'live-model';
+import type { StorageAdapter } from 'live-model';
 import { createLiveModelWebSocket } from '../src/websocket-handler.js';
 
 class TestPeer {
@@ -344,7 +344,7 @@ describe('createLiveModelWebSocket', () => {
     expect(encodeReferences).toHaveBeenCalledWith(value);
   });
 
-  test('subscribes to entity query snapshots until unquery', () => {
+  test('sends the initial entity query snapshot', () => {
     const liveModel = new BackendLiveModel(
       createStorage({ foo: { id: 'foo', count: 1 } })
     );
@@ -357,7 +357,7 @@ describe('createLiveModelWebSocket', () => {
         type: 'query',
         queryId: 'recent-tasks',
         data_source: 'entities',
-        query: {},
+        query: { filter: {} },
       })
     );
 
@@ -379,35 +379,6 @@ describe('createLiveModelWebSocket', () => {
       },
     ]);
 
-    liveModel.forKey('foo').setValue({ id: 'foo', count: 2 });
-    expect(peer.sent.at(-1)).toMatchObject({
-      type: 'query_snapshot',
-      items: [
-        {
-          key: 'foo',
-          state: {
-            kind: 'value',
-            value: { id: 'foo', count: 2 },
-            metadata: {},
-          },
-        },
-      ],
-    });
-
-    liveModel.forKey('bar').setValue({ id: 'bar' });
-    expect(
-      (peer.sent.at(-1) as { items: Array<{ key: string }> }).items.map(
-        (item) => item.key
-      )
-    ).toEqual(['bar', 'foo']);
-
-    liveModel.forKey('foo').deleteValue();
-    expect(
-      (peer.sent.at(-1) as { items: Array<{ key: string }> }).items.map(
-        (item) => item.key
-      )
-    ).toEqual(['bar']);
-
     websocket.message?.(
       asPeer(peer),
       createMessage({
@@ -419,69 +390,5 @@ describe('createLiveModelWebSocket', () => {
 
     liveModel.forKey('foo').setValue({ id: 'foo', count: 3 });
     expect(peer.sent).toHaveLength(messageCount);
-  });
-
-  test('delegates query execution to the configured source', () => {
-    const unsubscribe = vi.fn();
-    const query = vi.fn<QuerySource['query']>((query, subscriber) => {
-      subscriber.next({
-        items: [
-          {
-            key: 'external.1',
-            state: {
-              kind: 'value',
-              value: { source: 'external' } as never,
-              metadata: {},
-            },
-          },
-        ],
-        range: { hasMore: false },
-      });
-      return { unsubscribe };
-    });
-    const websocket = createLiveModelWebSocket(
-      new BackendLiveModel(createStorage()),
-      logger,
-      { query }
-    );
-    const peer = new TestPeer('peer');
-
-    websocket.message?.(
-      asPeer(peer),
-      createMessage({
-        type: 'query',
-        queryId: 'external',
-        data_source: 'entities',
-        query: { implementation: 'specific' },
-      })
-    );
-
-    expect(query).toHaveBeenCalledWith(
-      { implementation: 'specific' },
-      expect.objectContaining({ next: expect.any(Function) })
-    );
-    expect(peer.sent).toEqual([
-      {
-        type: 'query_snapshot',
-        queryId: 'external',
-        items: [
-          {
-            key: 'external.1',
-            state: {
-              kind: 'value',
-              value: { source: 'external' },
-              metadata: {},
-            },
-          },
-        ],
-        range: { hasMore: false },
-      },
-    ]);
-
-    websocket.message?.(
-      asPeer(peer),
-      createMessage({ type: 'unquery', queryId: 'external' })
-    );
-    expect(unsubscribe).toHaveBeenCalledOnce();
   });
 });

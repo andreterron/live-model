@@ -6,8 +6,12 @@ import {
   OperationSetRegistry,
   WebSocketTransport,
   type Live,
+  type LiveQuery,
   type Operation,
+  type QuerySnapshotMessage,
   type StateMessage,
+  type Subscription,
+  type WebSocketQuerySubscriber,
   type WebSocketTransportConnection,
   type WebSocketTransportSubscriber,
 } from '../src/index.js';
@@ -19,6 +23,11 @@ class ReferenceTestTransport extends WebSocketTransport {
     string,
     WebSocketTransportSubscriber
   >();
+  readonly queries: Array<{
+    queryId: string;
+    query: LiveQuery<unknown>;
+  }> = [];
+  private querySubscriber?: WebSocketQuerySubscriber;
 
   constructor() {
     super('ws://live-model.test');
@@ -43,6 +52,24 @@ class ReferenceTestTransport extends WebSocketTransport {
       key,
       state,
     });
+  }
+
+  override query(
+    queryId: string,
+    query: LiveQuery<unknown>,
+    subscriber: WebSocketQuerySubscriber
+  ): Subscription {
+    this.queries.push({ queryId, query });
+    this.querySubscriber = subscriber;
+    return {
+      unsubscribe: () => {
+        this.querySubscriber = undefined;
+      },
+    };
+  }
+
+  emitQuery(message: QuerySnapshotMessage) {
+    this.querySubscriber?.message(message);
   }
 }
 
@@ -70,6 +97,62 @@ describe('LiveModelClient', () => {
     });
 
     expect(client.forKey('people.1')).not.toBe(client.forKey('people.2'));
+  });
+
+  test('returns a query-result Live and forwards the query specification', () => {
+    const transport = new ReferenceTestTransport();
+    const client = new LiveModelClient({ transport });
+    const resultLive = client.query<{ name: string }>({
+      filter: { name: { $startsWith: 'A' } },
+      limit: 5,
+    });
+    const states: unknown[] = [];
+
+    resultLive.subscribe({ next: (state) => states.push(state) });
+    const sent = transport.queries[0];
+    expect(sent).toMatchObject({
+      query: {
+        filter: { name: { $startsWith: 'A' } },
+        limit: 5,
+      },
+    });
+
+    transport.emitQuery({
+      type: 'query_snapshot',
+      queryId: sent.queryId,
+      items: [
+        {
+          key: 'people.ada',
+          state: {
+            kind: 'value',
+            value: { name: 'Ada' },
+            metadata: {},
+          },
+        },
+      ],
+      range: { hasMore: false },
+    });
+
+    expect(states).toEqual([
+      { kind: 'loading' },
+      {
+        kind: 'value',
+        value: {
+          items: [
+            {
+              key: 'people.ada',
+              state: {
+                kind: 'value',
+                value: { name: 'Ada' },
+                metadata: {},
+              },
+            },
+          ],
+          range: { hasMore: false },
+        },
+        metadata: {},
+      },
+    ]);
   });
 
   test('keeps different clients isolated', () => {

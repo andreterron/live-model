@@ -1,4 +1,4 @@
-import { WebSocketQuerySource, WebSocketTransport } from '../src/index.js';
+import { LiveModelClient, WebSocketTransport } from '../src/index.js';
 
 class MockWebSocket extends EventTarget {
   static readonly CONNECTING = 0;
@@ -354,14 +354,18 @@ describe('WebSocketTransport', () => {
     });
     const message = vi.fn();
 
-    const subscription = transport.query('recent-people', {}, { message });
+    const subscription = transport.query(
+      'recent-people',
+      { filter: {} },
+      { message }
+    );
 
     expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
       JSON.stringify({
         type: 'query',
         queryId: 'recent-people',
         data_source: 'entities',
-        query: {},
+        query: { filter: {} },
       })
     );
 
@@ -396,14 +400,15 @@ describe('WebSocketTransport', () => {
     );
   });
 
-  test('adapts remote queries to the shared QuerySource interface', () => {
+  test('supports LiveModelClient query Lives', () => {
     const transport = new WebSocketTransport('ws://live-model.test', {
       WebSocket: MockWebSocket as unknown as typeof WebSocket,
     });
-    const source = new WebSocketQuerySource(transport);
+    const client = new LiveModelClient({ transport });
     const next = vi.fn();
 
-    source.query({}, { next });
+    const resultLive = client.query({ filter: {}, limit: 5 });
+    const subscription = resultLive.subscribe({ next });
 
     const sentQuery = JSON.parse(
       MockWebSocket.instances[0].send.mock.calls[0][0]
@@ -411,7 +416,7 @@ describe('WebSocketTransport', () => {
     expect(sentQuery).toMatchObject({
       type: 'query',
       data_source: 'entities',
-      query: {},
+      query: { filter: {}, limit: 5 },
     });
 
     const snapshot = {
@@ -429,9 +434,18 @@ describe('WebSocketTransport', () => {
       new MessageEvent('message', { data: JSON.stringify(snapshot) })
     );
 
-    expect(next).toHaveBeenCalledWith({
-      items: snapshot.items,
-      range: snapshot.range,
+    expect(next).toHaveBeenLastCalledWith({
+      kind: 'value',
+      value: {
+        items: snapshot.items,
+        range: snapshot.range,
+      },
+      metadata: {},
     });
+
+    subscription.unsubscribe();
+    expect(MockWebSocket.instances[0].send).toHaveBeenCalledWith(
+      JSON.stringify({ type: 'unquery', queryId: sentQuery.queryId })
+    );
   });
 });

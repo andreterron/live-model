@@ -34,5 +34,10 @@
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
     "zod": "^3.0.0"
+  },
+  "dependencies": {
+    "@ucast/mongo": "3.0.0",
+    "@ucast/mongo2js": "2.0.0",
+    "@ucast/sql": "0.2.0"
   }
 }

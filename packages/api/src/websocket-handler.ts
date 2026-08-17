@@ -8,9 +8,8 @@ import {
 } from 'live-model';
 import type { Message as WebSocketMessage, Peer, WSOptions } from 'crossws';
 import {
-  EntitiesQuerySource,
   type BackendLiveModel,
-  type QuerySource,
+  type LiveQuery,
   type Subscription,
 } from 'live-model';
 
@@ -33,8 +32,7 @@ function sendError(peer: Peer, error: string) {
 
 export function createLiveModelWebSocket(
   liveModel: BackendLiveModel,
-  logger: LiveModelWebSocketLogger = console,
-  entityQuerySource: QuerySource = new EntitiesQuerySource(liveModel)
+  logger: LiveModelWebSocketLogger = console
 ): WSOptions {
   const peerSubscriptions = new Map<Peer, Map<string, Subscription>>();
   const peerQueries = new Map<Peer, Map<string, Subscription>>();
@@ -135,25 +133,36 @@ export function createLiveModelWebSocket(
     }
   }
 
-  function subscribePeerToQuery(peer: Peer, queryId: string, query: unknown) {
+  function subscribePeerToQuery(
+    peer: Peer,
+    queryId: string,
+    query: LiveQuery<unknown>
+  ) {
     unsubscribePeerFromQuery(peer, queryId);
 
     let querySubscription: Subscription;
     try {
-      querySubscription = entityQuerySource.query(query, {
-        next(result) {
+      const resultLive = liveModel.query(query);
+      querySubscription = resultLive.subscribe({
+        next(state) {
+          if (state.kind === 'loading') {
+            return;
+          }
+          if (state.kind === 'absent') {
+            sendError(
+              peer,
+              state.error instanceof Error
+                ? state.error.message
+                : 'Query source failed'
+            );
+            return;
+          }
           const message: QuerySnapshotMessage = {
             type: 'query_snapshot',
             queryId,
-            ...result,
+            ...state.value,
           };
           send(peer, message);
-        },
-        error(error) {
-          sendError(
-            peer,
-            error instanceof Error ? error.message : 'Query source failed'
-          );
         },
       });
     } catch (error) {

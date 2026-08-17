@@ -10,8 +10,10 @@ describe('query messages', () => {
       queryId: 'recent-tasks',
       data_source: 'entities',
       query: {
-        from: 'tasks',
-        orderBy: [{ field: 'createdAt', direction: 'desc' }],
+        filter: {
+          from: 'tasks',
+          orderBy: [{ field: 'createdAt', direction: 'desc' }],
+        },
         limit: 20,
       },
     };
@@ -25,7 +27,7 @@ describe('query messages', () => {
       queryMessageSchema.safeParse({
         type: 'query',
         data_source: 'entities',
-        query: {},
+        query: { filter: {} },
       }).success
     ).toBe(false);
     expect(
@@ -33,6 +35,31 @@ describe('query messages', () => {
         type: 'query',
         queryId: 'recent-tasks',
         data_source: 'entities',
+      }).success
+    ).toBe(false);
+    expect(
+      queryMessageSchema.safeParse({
+        type: 'query',
+        queryId: 'recent-tasks',
+        data_source: 'entities',
+        query: 'not-an-object',
+      }).success
+    ).toBe(false);
+  });
+
+  test('accepts query limits for server-side normalization', () => {
+    const message = {
+      type: 'query',
+      queryId: 'limited',
+      data_source: 'entities',
+      query: { filter: {}, limit: 20_000 },
+    };
+
+    expect(queryMessageSchema.parse(message)).toEqual(message);
+    expect(
+      queryMessageSchema.safeParse({
+        ...message,
+        query: { filter: {}, limit: -1 },
       }).success
     ).toBe(false);
   });

@@ -7,8 +7,12 @@ import {
   type WebSocketTransportOptions,
 } from './creators/web-socket/web-socket-transport.js';
 import type { Live } from './live.js';
+import { generateId } from './model/generate-id.js';
 import { OperationSetRegistry } from './operation-set-registry.js';
 import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
+import type { LiveQuery } from './query/query-language.js';
+import type { QueryResult } from './query/query-result.js';
+import { WebSocketQueryLive } from './query/web-socket-query-live.js';
 
 export interface LiveModelClientOptions {
   websocketUrl?: string | URL;
@@ -65,6 +69,14 @@ export class LiveModelClient {
 
   encodeReferences(value: unknown): unknown {
     return this.referenceCodec.encode(value);
+  }
+
+  query<T = unknown>(query: LiveQuery<T>): Live<QueryResult<T>, never> {
+    return new WebSocketQueryLive<T>(
+      this.getTransport(),
+      `query_${generateId()}`,
+      query
+    );
   }
 
   clear(): void {

@@ -11,6 +11,9 @@ import type { Subscriber } from './reactivity/subscriber.js';
 import type { Subscription } from './reactivity/subscription.js';
 import { LiveReferenceCodec, ReferenceResolvingLive } from './references.js';
 import { OperationSetRegistry } from './operation-set-registry.js';
+import { EntitiesQueryLive } from './query/entities-query-live.js';
+import type { LiveQuery } from './query/query-language.js';
+import type { QueryResult } from './query/query-result.js';
 
 export type BackendLiveFactory = <T>(key: string) => Live<T>;
 
@@ -135,6 +138,14 @@ export class BackendLiveModel {
 
   encodeReferences(value: unknown): unknown {
     return this.referenceCodec.encode(value);
+  }
+
+  query<T = unknown>(query: LiveQuery<T>): Live<QueryResult<T>, never> {
+    return new EntitiesQueryLive(
+      this.storage,
+      (key) => this.forKey<T>(key),
+      query
+    );
   }
 
   processOperation(key: string, operation: Operation): OperationStatusMessage {
